@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "padelpro-vision"
+version = "0.1.0"
+description = "Modulos de analise de padel (tempo util, fases, pancadas) sobre o output do padel_analytics"
+requires-python = ">=3.10"
+dependencies = ["pandas>=2.0", "numpy>=1.24", "PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+padelpro = "padelpro.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["padelpro*"]

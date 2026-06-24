@@ -1,0 +1,51 @@
+# Configuracao do PadelPro Vision.
+# Copia para config.yaml e ajusta aos nomes/escalas do teu pipeline.
+
+fps: 30
+
+court:
+  # Dimensoes oficiais de padel (metros). Origem assumida num canto;
+  # a rede fica a meio do comprimento.
+  width: 10.0       # eixo x
+  length: 20.0      # eixo y
+  net_y: 10.0       # posicao da rede no eixo y (auto se null)
+
+# Mapeamento de colunas do CSV principal (output do padel_analytics).
+# Por defeito segue o into_dataframe() do repo do Joao.
+columns:
+  frame: frame
+  time: time
+  player_x: "player{id}_x"      # {id} = 1..4
+  player_y: "player{id}_y"
+  player_speed: "player{id}_Vnorm1"   # null -> calculado das posicoes
+
+# Ficheiro opcional da bola
+ball:
+  path: null
+  frame: frame
+  x: ball_x
+  y: ball_y
+  hit: ball_hit                 # coluna booleana opcional
+
+# Ficheiro opcional de pancadas ja detetadas
+shots:
+  path: null
+  frame: frame
+  player_id: player_id
+  stroke: stroke
+  incoming_ball_speed: incoming_ball_speed   # opcional
+
+# Modulo 1 - tempo util
+active_time:
+  speed_threshold: 1.5     # m/s; acima disto a bola/jogo esta "ativo"
+  min_pause_s: 2.0         # pausa so conta apos este tempo parado (regra v9)
+  min_rally_s: 1.0         # descarta rallies mais curtos que isto
+
+# Modulo 2 - fases
+phases:
+  attack_threshold_m: 5.0  # distancia a rede abaixo da qual o jogador esta "na rede"
+
+# Modulo 3 - pancadas/erros (heuristica; calibrar com dados anotados)
+shots_analysis:
+  forced_speed_threshold: 18.0   # m/s; bola recebida rapida -> tende a forcado
+  forced_reach_threshold_m: 2.0  # jogador longe da bola -> tende a forcado
