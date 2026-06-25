@@ -4,11 +4,14 @@
 fps: 30
 
 court:
-  # Dimensoes oficiais de padel (metros). Origem assumida num canto;
-  # a rede fica a meio do comprimento.
+  # Dimensoes oficiais de padel (metros).
   width: 10.0       # eixo x
   length: 20.0      # eixo y
-  net_y: 10.0       # posicao da rede no eixo y (auto se null)
+  net_y: 10.0       # posicao da rede no eixo y
+  # origin: "corner"  -> coords 0..width, 0..length (rede em net_y)
+  # origin: "centered" -> origem no centro, rede em y=0 (como o padel_analytics).
+  #   Neste modo o loader desloca automaticamente para "corner".
+  origin: centered
 
 # Mapeamento de colunas do CSV principal (output do padel_analytics).
 # Por defeito segue o into_dataframe() do repo do Joao.

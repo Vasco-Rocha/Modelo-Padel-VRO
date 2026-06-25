@@ -15,7 +15,10 @@ from ..core.schema import GameData, Shot
 def default_config() -> dict:
     return {
         "fps": 30,
-        "court": {"width": 10.0, "length": 20.0, "net_y": 10.0},
+        # origin: "corner" (0..width, 0..length, rede em net_y) ou
+        # "centered" (origem no centro, rede em y=0, x/y podem ser negativos —
+        # como o padel_analytics produz). Em "centered" o loader desloca para "corner".
+        "court": {"width": 10.0, "length": 20.0, "net_y": 10.0, "origin": "corner"},
         "columns": {
             "frame": "frame",
             "time": "time",
@@ -84,6 +87,19 @@ def load_game_data(
         dt = out["time"].diff().replace(0, np.nan)
         out["ball_speed"] = np.sqrt(out["ball_x"].diff()**2 + out["ball_y"].diff()**2) / dt
         has_ball = True
+
+    # Referencial: se as coordenadas vêm centradas (rede em y=0), deslocar para
+    # o referencial de canto (0..width, 0..length) que os módulos assumem.
+    court_cfg = cfg.get("court", {})
+    if court_cfg.get("origin") == "centered":
+        dx = court_cfg.get("width", 10.0) / 2.0
+        dy = court_cfg.get("length", 20.0) / 2.0
+        for pid in (1, 2, 3, 4):
+            out[f"p{pid}_x"] = out[f"p{pid}_x"] + dx
+            out[f"p{pid}_y"] = out[f"p{pid}_y"] + dy
+        if has_ball:
+            out["ball_x"] = out["ball_x"] + dx
+            out["ball_y"] = out["ball_y"] + dy
 
     out = out.sort_values("frame").reset_index(drop=True)
     return GameData(frames=out, fps=float(fps), has_ball=has_ball)

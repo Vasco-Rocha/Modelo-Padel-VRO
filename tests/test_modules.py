@@ -38,6 +38,24 @@ def test_pipeline_end_to_end():
     assert "active_time" in analysis and "phases" in analysis and "shots" in analysis
 
 
+def test_centered_origin_shift():
+    # CSV com coords centradas (rede em y=0) deve ser deslocado para canto.
+    import tempfile, os
+    from padelpro.io.loader import load_game_data, default_config
+    game, _ = make_synthetic_game(seed=8)
+    df = game.frames.copy()
+    for pid in (1, 2, 3, 4):
+        df[f"player{pid}_x"] = df[f"p{pid}_x"] - 5.0   # centrar
+        df[f"player{pid}_y"] = df[f"p{pid}_y"] - 10.0
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "c.csv"); df.to_csv(p, index=False)
+        cfg = default_config(); cfg["court"]["origin"] = "centered"
+        g = load_game_data(p, fps=30, config=cfg)
+    # depois do shift, posicoes voltam ao intervalo de canto (0..20 em y)
+    assert g.frames["p1_y"].min() >= -1
+    assert g.frames["p1_y"].max() <= 21
+
+
 def test_works_without_ball():
     game, shots = make_synthetic_game(seed=6)
     game.has_ball = False
