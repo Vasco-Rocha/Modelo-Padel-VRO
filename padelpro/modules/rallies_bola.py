@@ -53,26 +53,104 @@ def _vel(ball_xy, f) -> float | None:
     return math.hypot(x1 - x0, y1 - y0)
 
 
-def detetar_pancadas(ball_xy, player_boxes, fps, limiar_px=80.0, pico_vel=25.0):
-    """R-pancada: bola aproxima-se de uma box e depois afasta-se / pico de velocidade.
-    Devolve lista de frames onde ha' pancada."""
+def detetar_pancadas(ball_xy, player_boxes, fps, limiar_px=80.0, pico_vel=25.0,
+                     ang_min_deg=55.0, max_gap_f=None):
+    """Deteção de pancada pela TRAJETORIA da bola (metodo inspirado no paper de tenis de
+    mesa 'Stroke Detection Using Ball Trajectory Data', arxiv 2302.09657): uma pancada e' uma
+    MUDANCA BRUSCA de direcao/velocidade da bola (contacto com a raquete/parede).
+
+    Sinais combinados:
+      (a) angulo entre o vetor de entrada (i-1->i) e de saida (i->i+1) > ang_min_deg (a bola 'dobra');
+      (b) OU pico de velocidade junto a uma box de jogador (contacto).
+    Usa so' frames com bola detetada (salta gaps ate max_gap_f) para ser robusto ao recall baixo.
+    """
+    import math
+    if max_gap_f is None:
+        max_gap_f = int(0.5 * fps)
     n = len(ball_xy)
+    pts = [(f, ball_xy[f][0], ball_xy[f][1]) for f in range(n) if ball_xy[f] is not None]
     pancadas = []
-    for f in range(1, n - 1):
-        pj = _bola_perto(ball_xy[f], player_boxes[f] if f < len(player_boxes) else [], limiar_px)
-        if pj is None:
+    for k in range(1, len(pts) - 1):
+        (f0, x0, y0), (f1, x1, y1), (f2, x2, y2) = pts[k - 1], pts[k], pts[k + 1]
+        if f1 - f0 > max_gap_f or f2 - f1 > max_gap_f:
             continue
-        v = _vel(ball_xy, f + 1)
-        # aproximou-se (perto de um jogador) e a seguir acelera/afasta-se
-        if v is not None and v >= pico_vel:
-            if not pancadas or f - pancadas[-1] > int(0.3 * fps):  # anti-duplicado
-                pancadas.append(f)
+        vin = (x1 - x0, y1 - y0); vout = (x2 - x1, y2 - y1)
+        nin = math.hypot(*vin); nout = math.hypot(*vout)
+        if nin < 1e-6 or nout < 1e-6:
+            continue
+        cos = (vin[0] * vout[0] + vin[1] * vout[1]) / (nin * nout)
+        ang = math.degrees(math.acos(max(-1.0, min(1.0, cos))))
+        # (a) a trajetoria dobra o suficiente
+        dobra = ang >= ang_min_deg
+        # (b) ou pico de velocidade perto de um jogador
+        pj = _bola_perto((x1, y1), player_boxes[f1] if f1 < len(player_boxes) else [], limiar_px)
+        pico = pj is not None and nout / max(1, (f2 - f1)) >= pico_vel
+        if dobra or pico:
+            if not pancadas or f1 - pancadas[-1] > int(0.3 * fps):   # anti-duplicado
+                pancadas.append(f1)
     return pancadas
 
 
 def _centro(box):
     x1, y1, x2, y2 = box
     return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
+
+
+def _box_mais_proxima(boxes, ponto):
+    if not boxes or ponto is None:
+        return None
+    return min(boxes, key=lambda b: _dist_ponto_box(ponto, b))
+
+
+def _subida_apos_servico(player_boxes, f0, servidor, fps, center_y,
+                         seg=1.5, min_aprox_px=20.0) -> bool:
+    """Idea do Vasco: apos servir, o servidor CORRE para o interior (sobe a' rede).
+    Segue a box mais proxima do servidor nos ~seg seguintes e ve se os pes se APROXIMAM
+    do interior (center_y = entre as duas linhas de servico) pelo menos min_aprox_px."""
+    n = len(player_boxes)
+    if f0 >= n or center_y is None:
+        return False
+    ref = _centro(servidor)
+    d0 = abs(servidor[3] - center_y)          # distancia inicial dos pes ao interior
+    melhor = 0.0
+    for f in range(f0 + 1, min(f0 + int(seg * fps), n)):
+        bs = player_boxes[f]
+        if not bs:
+            continue
+        b = min(bs, key=lambda b: (_centro(b)[0] - ref[0])**2 + (_centro(b)[1] - ref[1])**2)
+        ref = _centro(b)
+        melhor = max(melhor, d0 - abs(b[3] - center_y))
+    return melhor >= min_aprox_px
+
+
+def _formacao_servico(boxes, serve_zone_y, center_y, tol_rede_px=70.0) -> bool:
+    """Formacao de servico (ideia do Vasco): 3 jogadores na/perto da linha de servico
+    (incluindo o servidor) + o parceiro do servidor na REDE. Precisa das bandas calibradas."""
+    if not boxes or not serve_zone_y or center_y is None:
+        return False
+    na_linha = sum(1 for b in boxes if any(ymin <= b[3] <= ymax for (ymin, ymax) in serve_zone_y))
+    na_rede = sum(1 for b in boxes if abs(b[3] - center_y) <= tol_rede_px)
+    return na_linha >= 3 and na_rede >= 1
+
+
+def _box_parada_antes(player_boxes, f0, ponto, fps, seg=0.7, desloc_px=25.0) -> bool:
+    """Idea B (parcial): o jogador de onde a bola sai estava ~PARADO (preparado) antes do
+    servico. Sem IDs de tracking, aproxima pela box mais proxima frame a frame."""
+    w = int(seg * fps)
+    if f0 - w < 0 or f0 >= len(player_boxes):
+        return False
+    b0 = _box_mais_proxima(player_boxes[f0], ponto)
+    if b0 is None:
+        return False
+    c0 = _centro(b0)
+    for f in range(f0 - w, f0):
+        bs = player_boxes[f] if f < len(player_boxes) else []
+        if not bs:
+            return False
+        cn = min((_centro(b) for b in bs), key=lambda c: (c[0] - c0[0])**2 + (c[1] - c0[1])**2)
+        if abs(cn[0] - c0[0]) > desloc_px or abs(cn[1] - c0[1]) > desloc_px:
+            return False
+    return True
 
 
 def jogadores_parados(player_boxes, f, fps, n_jogadores=4, seg=3.0, desloc_px=15.0) -> bool:
@@ -121,7 +199,8 @@ def segmentar_rallies_bola(
     ball_xy,
     player_boxes,
     fps,
-    limiar_mao_px=60.0,      # bola "colada" a' box do jogador
+    limiar_mao_px=60.0,      # bola "colada" a' box do jogador (fim: bola na mao)
+    limiar_servico_px=90.0,  # bola SAI de perto de uma box (inicio: servico)
     frames_mao=None,          # K frames para confirmar bola na mao (default ~0.4s)
     gap_fora_s=2.0,           # R2: bola sumida > isto = candidato a fim
     janela_fim_s=5.0,         # R5: esperar isto por nova pancada (Vasco: 5s)
@@ -129,6 +208,8 @@ def segmentar_rallies_bola(
     margem_video_s=2.0,       # R8: so' para o clip de video
     audio_hits_s=None,        # R15: lista de timestamps (s) de pancada por AUDIO — REFERENCIA
     audio_tol_s=0.5,          # tolerancia do audio (pode estar atrasado)
+    serve_zone_y=None,        # bandas de servico (pixeis) p/ camara fixa: [(ymin,ymax),...]
+                              #   os pes do servidor tem de estar numa banda. None = nao filtra.
 ):
     n = len(ball_xy)
     if frames_mao is None:
@@ -142,73 +223,94 @@ def segmentar_rallies_bola(
     audio_frames = set(int(round(t * fps)) for t in (audio_hits_s or []))
     audio_tol = int(audio_tol_s * fps)
 
-    rallies, servicos = [], []
-    estado = "FORA"
-    inicio = None
-    mao_desde = None          # frame em que a bola comecou a estar na mao
-    ultima_bola = None        # ultimo frame com bola visivel/movel
+    # ---- NUCLEO: esqueleto pela ATIVIDADE DA BOLA (robusto ao recall baixo) ----
+    # A bola so' e' detetada em ~15% dos frames, por isso NAO se exige servico para
+    # o rally existir. O rally = corrida de presenca da bola, unindo falhas <= gap.
+    # O servico e a bola-na-mao servem so' para AFINAR as pontas (nao para gatear).
+    present = [ball_xy[f] is not None for f in range(n)]
+    runs = []
+    i = 0
+    while i < n:
+        if not present[i]:
+            i += 1; continue
+        a = i
+        while i + 1 < n and present[i + 1]:
+            i += 1
+        runs.append([a, i]); i += 1
+    merged = []
+    for r in runs:
+        if merged and (r[0] - merged[-1][1] - 1) <= gap:
+            merged[-1][1] = r[1]
+        else:
+            merged.append(list(r))
 
-    def bola_visivel(f):
-        return ball_xy[f] is not None
-
-    for f in range(n):
+    def _na_mao(f):
         boxes = player_boxes[f] if f < len(player_boxes) else []
         pj = _bola_perto(ball_xy[f], boxes, limiar_mao_px)
         v = _vel(ball_xy, f)
-        na_mao = pj is not None and (v is None or v < 3.0)  # perto + ~parada
+        return pj is not None and (v is None or v < 3.0)
 
-        if estado == "FORA":
-            # R1: bola estava na mao e AFASTA-SE => servico => inicio
-            if mao_desde is not None and (f - mao_desde) >= frames_mao and pj is None:
-                # inicio = momento em que a bola sai (servico), com no maximo 1.5s de preparacao antes
-                inicio_cand = max(mao_desde, f - int(1.5 * fps))
-                if servico_valido(inicio_cand, ball_xy, player_boxes, fps):
-                    inicio = inicio_cand
-                    servicos.append(f)          # frame do servico (bola sai)
-                    estado = "EM_JOGO"
-                    ultima_bola = f
-                mao_desde = None
-            elif na_mao:
-                mao_desde = mao_desde if mao_desde is not None else f
+    # evento global: bola-na-mao sustida (para afinar o FIM)
+    hand_holds = []
+    mao_desde = None
+    for f in range(n):
+        if _na_mao(f):
+            if mao_desde is None:
+                mao_desde = f
+            if (f - mao_desde) == frames_mao:
+                hand_holds.append(mao_desde)            # inicio de bola-na-mao sustida
+        else:
+            mao_desde = None
+
+    pre = int(0.5 * fps)          # pequena preparacao antes do servico
+    win_e = int(1.0 * fps)        # janela p/ associar bola-na-mao ao fim
+    rallies, servicos = [], []
+    for s, e in merged:
+        if (e - s) / fps < min_rally_s:
+            continue
+        # SERVICO (ideia do Vasco): a bola COMECA a mover-se saindo de uma box de jogador,
+        # mesmo que nao fosse detetada antes. => 1a aparicao da bola na corrida, perto de uma box.
+        f0 = next((f for f in range(s, min(e + 1, n)) if present[f]), s)
+        boxes0 = player_boxes[f0] if f0 < len(player_boxes) else []
+        servidor = _box_mais_proxima(boxes0, ball_xy[f0])
+        perto_jogador = servidor is not None and _dist_ponto_box(ball_xy[f0], servidor) < limiar_servico_px
+        # servidor perto da LINHA DE SERVICO (camara fixa): pes (base da box) numa banda
+        na_zona = True
+        center_y = None
+        if serve_zone_y:
+            center_y = sum((a + b) / 2.0 for (a, b) in serve_zone_y) / len(serve_zone_y)
+            if perto_jogador:
+                na_zona = any(ymin <= servidor[3] <= ymax for (ymin, ymax) in serve_zone_y)
+        if perto_jogador:
+            preparado = _box_parada_antes(player_boxes, f0, ball_xy[f0], fps)      # parado antes
+            subiu = _subida_apos_servico(player_boxes, f0, servidor, fps, center_y)  # corre p/ a rede
+            formacao = _formacao_servico(boxes0, serve_zone_y, center_y)           # 3 na linha + parceiro na rede
+            inicio = max(0, f0 - pre)
+            # servico "de livro" = na zona + (parado antes / sobe a' rede / formacao correta)
+            sinais = sum([preparado, na_zona, subiu, formacao])
+            if na_zona and sinais >= 2:
+                mo_i, conf = "servico", "alta"
+            elif na_zona and (preparado or subiu):
+                mo_i, conf = "servico", "media"
+            elif na_zona:
+                mo_i, conf = "servico?", "media"
             else:
-                mao_desde = None
-
-        elif estado == "EM_JOGO":
-            if bola_visivel(f):
-                ultima_bola = f
-            # R3: bola na mao e parada por >= frames_mao => fim candidato
-            fim_por_mao = na_mao and mao_desde is not None and (f - mao_desde) >= frames_mao
-            # R2: bola sumiu ha' mais de gap
-            fim_por_gap = ultima_bola is not None and (f - ultima_bola) > gap
-            # R5 do prompt: todos os jogadores parados ~3s => fim rapido
-            fim_por_paragem = jogadores_parados(player_boxes, f, fps)
-            if na_mao:
-                mao_desde = mao_desde if mao_desde is not None else f
-            else:
-                mao_desde = None
-
-            if fim_por_mao or fim_por_gap or fim_por_paragem:
-                if fim_por_mao:
-                    fim_cand, motivo, conf = mao_desde, "bola_na_mao", "alta"
-                elif fim_por_paragem:
-                    fim_cand, motivo, conf = f, "jogadores_parados", "alta"
-                else:
-                    fim_cand, motivo, conf = ultima_bola, "timeout_bola", "media"
-                # R5: confirmar — ha' nova pancada (nao-servico) na janela?
-                nova = [p for p in pancadas if fim_cand < p <= fim_cand + jfim and p not in servicos]
-                if nova:
-                    continue  # rally continua
-                # fecha
-                if (fim_cand - inicio) / fps >= min_rally_s:
-                    rallies.append((inicio, fim_cand, motivo, conf))
-                estado = "FORA"
-                inicio = None
-                mao_desde = None
-
-    # fecho no fim do video
-    if estado == "EM_JOGO" and inicio is not None and ultima_bola is not None:
-        if (ultima_bola - inicio) / fps >= min_rally_s:
-            rallies.append((inicio, ultima_bola, "fim_video", "media"))
+                mo_i, conf = "bola_sai_jogador", "baixa"   # perto de jogador mas fora da zona
+            servicos.append(f0)
+        else:
+            inicio = s; mo_i = "bola_ativa"; conf = "media"
+        # afinar FIM (ideia do Vasco): o ponto acaba na ULTIMA PANCADA do rally
+        # (a bola depois voa para fora, mas ja nao e' jogo). Senao, bola-na-mao; senao, bola parou.
+        pcs = [p for p in pancadas if inicio < p <= e]
+        hc = [h for h in hand_holds if e - win_e <= h <= e + win_e]
+        if pcs:
+            fim = pcs[-1]; mo_f = "ultima_pancada"
+        elif hc:
+            fim = min(hc); mo_f = "bola_na_mao"
+        else:
+            fim = e; mo_f = "bola_parou"
+        if (fim - inicio) / fps >= min_rally_s:
+            rallies.append((inicio, fim, f"{mo_i}/{mo_f}", conf))
 
     dur = [(b - a) / fps for a, b, _, _ in rallies]
     mv = int(margem_video_s * fps)
