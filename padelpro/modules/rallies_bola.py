@@ -208,6 +208,7 @@ def segmentar_rallies_bola(
     margem_video_s=2.0,       # R8: so' para o clip de video
     audio_hits_s=None,        # R15: lista de timestamps (s) de pancada por AUDIO — REFERENCIA
     audio_tol_s=0.5,          # tolerancia do audio (pode estar atrasado)
+    margem_fim_s=3.0,         # segundos apos a ultima pancada (o detetor perde os ultimos toques)
     serve_zone_y=None,        # bandas de servico (pixeis) p/ camara fixa: [(ymin,ymax),...]
                               #   os pes do servidor tem de estar numa banda. None = nao filtra.
 ):
@@ -299,16 +300,18 @@ def segmentar_rallies_bola(
             servicos.append(f0)
         else:
             inicio = s; mo_i = "bola_ativa"; conf = "media"
-        # afinar FIM (ideia do Vasco): o ponto acaba na ULTIMA PANCADA do rally
-        # (a bola depois voa para fora, mas ja nao e' jogo). Senao, bola-na-mao; senao, bola parou.
+        # afinar FIM: ULTIMA PANCADA detetada + margem_fim_s (o detetor perde os ultimos
+        # toques, por isso a ultima pancada fica cedo; a margem cobre o resto do ponto).
+        # Excecao: bola-na-mao (ponto apanhado) = fim limpo, sem margem.
+        margem_fim = int(margem_fim_s * fps)
         pcs = [p for p in pancadas if inicio < p <= e]
-        hc = [h for h in hand_holds if e - win_e <= h <= e + win_e]
-        if pcs:
-            fim = pcs[-1]; mo_f = "ultima_pancada"
-        elif hc:
+        hc = [h for h in hand_holds if inicio < h <= e + win_e]
+        if hc:
             fim = min(hc); mo_f = "bola_na_mao"
+        elif pcs:
+            fim = min(pcs[-1] + margem_fim, n - 1); mo_f = "ultima_pancada+margem"
         else:
-            fim = e; mo_f = "bola_parou"
+            fim = min(e + margem_fim, n - 1); mo_f = "bola_parou+margem"
         if (fim - inicio) / fps >= min_rally_s:
             rallies.append((inicio, fim, f"{mo_i}/{mo_f}", conf))
 
@@ -347,6 +350,14 @@ def segmentar_rallies_bola(
             if (b - ini) / fps >= min_rally_s:
                 rallies2.append((ini, b, "servico|split", "alta"))
         rallies = rallies2
+
+    # de-overlap: a margem de fim nao pode invadir o rally seguinte
+    rallies.sort(key=lambda r: r[0])
+    for i in range(len(rallies) - 1):
+        a, b, mo, cf = rallies[i]
+        a_next = rallies[i + 1][0]
+        if b >= a_next:
+            rallies[i] = (a, max(a, a_next - 1), mo, cf)
 
     dur = [(b - a) / fps for a, b, _, _ in rallies]
     mv = int(margem_video_s * fps)
