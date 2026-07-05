@@ -1,8 +1,11 @@
-"""Modulo 2 — Fases de jogo.
+"""Modulo 2 — Fases de jogo (regra das duas boxes, v9).
 
-Classifica cada frame pela formacao das duas duplas (rede / fundo / transicao),
-a partir das posicoes projetadas no campo. As duplas sao inferidas pelo lado da
-rede onde cada jogador joga maioritariamente.
+Classifica cada frame pela fase tatica de cada dupla — DEFESA / TRANSICAO / ATAQUE
+— a partir das posicoes (base da caixa) projetadas no campo. Regra v9:
+  - DEFESA  = AMBOS atras da linha de servico (dist a rede >= defense_min_m).
+  - ATAQUE  = AMBOS a' frente da intersecao malha 3/2 (dist a rede <= attack_max_m).
+  - TRANSICAO = tudo o resto (estado-residuo).
+As duplas sao inferidas pelo lado da rede onde cada jogador joga maioritariamente.
 """
 from __future__ import annotations
 import numpy as np
@@ -20,26 +23,28 @@ def _assign_teams(df: pd.DataFrame, court: Court) -> dict[str, list[int]]:
     return {"near": near, "far": far}
 
 
-def _team_formation(df_row, pids, court: Court, attack_threshold_m: float) -> str:
-    at_net = []
+def _team_formation(df_row, pids, court: Court, attack_max_m: float, defense_min_m: float) -> str:
+    """Fase v9 da dupla (regra das duas boxes): DEFESA / ATAQUE / TRANSICAO."""
+    zones = []
     for pid in pids:
         y = df_row.get(f"p{pid}_y", np.nan)
         if pd.isna(y):
             continue
-        at_net.append(court.dist_to_net(float(y)) < attack_threshold_m)
-    if not at_net:
+        zones.append(court.phase_zone(float(y), attack_max_m, defense_min_m))
+    if not zones:
         return "desconhecido"
-    if all(at_net):
-        return "rede"
-    if not any(at_net):
-        return "fundo"
-    return "transicao"
+    if all(z == "ATAQUE" for z in zones):
+        return "ATAQUE"
+    if all(z == "DEFESA" for z in zones):
+        return "DEFESA"
+    return "TRANSICAO"
 
 
 def analyze_phases(
     game: GameData,
     court: Court | None = None,
-    attack_threshold_m: float = 5.0,
+    attack_max_m: float = 3.0,
+    defense_min_m: float = 7.0,
 ) -> dict:
     court = court or Court()
     df = game.frames
@@ -47,8 +52,8 @@ def analyze_phases(
 
     labels = []
     for _, row in df.iterrows():
-        near_f = _team_formation(row, teams["near"], court, attack_threshold_m)
-        far_f = _team_formation(row, teams["far"], court, attack_threshold_m)
+        near_f = _team_formation(row, teams["near"], court, attack_max_m, defense_min_m)
+        far_f = _team_formation(row, teams["far"], court, attack_max_m, defense_min_m)
         labels.append(f"near:{near_f}|far:{far_f}")
     df = df.assign(_phase=labels)
 

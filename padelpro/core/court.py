@@ -38,3 +38,30 @@ class Court:
         else:
             depth = "fundo"
         return f"{side}_{depth}"
+
+    def phase_zone(
+        self, y: float,
+        attack_max_m: float = 3.0,
+        defense_min_m: float = 7.0,
+    ) -> str:
+        """Zona tatica de UM jogador (regra v9), pela distancia a rede:
+        ATAQUE (<= attack_max_m), DEFESA (>= defense_min_m), TRANSICAO entre as duas.
+
+        Marcas fisicas v9: limite Transicao/Ataque = intersecao malha 3/2;
+        limite Defesa/Transicao = linha de servico (~3m do fundo => ~7m da rede).
+        """
+        d = self.dist_to_net(y)
+        if d <= attack_max_m:
+            return "ATAQUE"
+        if d >= defense_min_m:
+            return "DEFESA"
+        return "TRANSICAO"
+
+
+def feet_point(x1: float, y1: float, x2: float, y2: float) -> tuple[float, float]:
+    """Ponto de contacto com o solo = centro da aresta INFERIOR da bbox (regra v9).
+
+    A posicao de um jogador e' este ponto (nunca a cabeca/tronco), antes de aplicar
+    a homografia para obter metros no campo.
+    """
+    return ((x1 + x2) / 2.0, max(y1, y2))

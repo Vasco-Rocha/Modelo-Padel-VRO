@@ -44,9 +44,11 @@ active_time:
   min_pause_s: 2.0         # pausa so conta apos este tempo parado (regra v9)
   min_rally_s: 1.0         # descarta rallies mais curtos que isto
 
-# Modulo 2 - fases
+# Modulo 2 - fases (regra das duas boxes, v9): DEFESA / TRANSICAO / ATAQUE
+# Zonas por distancia a rede (metros). Transicao fica entre as duas marcas.
 phases:
-  attack_threshold_m: 5.0  # distancia a rede abaixo da qual o jogador esta "na rede"
+  attack_max_m: 3.0    # <= isto da rede = ATAQUE (a' frente da intersecao malha 3/2)
+  defense_min_m: 7.0   # >= isto da rede = DEFESA (atras da linha de servico)
 
 # Modulo 3 - pancadas/erros (heuristica; calibrar com dados anotados)
 shots_analysis:
