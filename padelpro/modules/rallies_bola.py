@@ -202,7 +202,8 @@ def segmentar_rallies_bola(
     limiar_mao_px=60.0,      # bola "colada" a' box do jogador (fim: bola na mao)
     limiar_servico_px=90.0,  # bola SAI de perto de uma box (inicio: servico)
     frames_mao=None,          # K frames para confirmar bola na mao (default ~0.4s)
-    gap_fora_s=2.0,           # R2: bola sumida > isto = candidato a fim
+    gap_fora_s=2.0,           # R2: bola sumida > isto (usado so' sem serve_zone)
+    gap_max_s=8.0,            # com serve_zone: junta corridas ate' este gap se a seguinte NAO for servico
     janela_fim_s=5.0,         # R5: esperar isto por nova pancada (Vasco: 5s)
     min_rally_s=1.0,          # R7
     margem_video_s=2.0,       # R8: so' para o clip de video
@@ -238,18 +239,43 @@ def segmentar_rallies_bola(
         while i + 1 < n and present[i + 1]:
             i += 1
         runs.append([a, i]); i += 1
-    merged = []
-    for r in runs:
-        if merged and (r[0] - merged[-1][1] - 1) <= gap:
-            merged[-1][1] = r[1]
-        else:
-            merged.append(list(r))
-
     def _na_mao(f):
         boxes = player_boxes[f] if f < len(player_boxes) else []
         pj = _bola_perto(ball_xy[f], boxes, limiar_mao_px)
         v = _vel(ball_xy, f)
         return pj is not None and (v is None or v < 3.0)
+
+    cy_zone = (sum((a + b) / 2.0 for (a, b) in serve_zone_y) / len(serve_zone_y)) if serve_zone_y else None
+
+    def _comeca_com_servico(f0):
+        """A bola EMERGE de perto de um jogador na zona de servico, parado/formacao = SERVICO."""
+        if ball_xy[f0] is None or not serve_zone_y:
+            return False
+        boxes = player_boxes[f0] if f0 < len(player_boxes) else []
+        sv = _box_mais_proxima(boxes, ball_xy[f0])
+        if sv is None or _dist_ponto_box(ball_xy[f0], sv) >= limiar_servico_px:
+            return False
+        if not any(ymin <= sv[3] <= ymax for (ymin, ymax) in serve_zone_y):
+            return False
+        return (_box_parada_antes(player_boxes, f0, ball_xy[f0], fps)
+                or _formacao_servico(boxes, serve_zone_y, cy_zone))
+
+    # REGRA DO VASCO: o ponto so' acaba se a PROXIMA PANCADA for SERVICO.
+    # -> junta corridas de bola separadas por um gap SE a seguinte NAO comeca por servico
+    #    (o ponto continuou apos falha de detecao); so' separa quando a seguinte E' um servico.
+    gap_max = int(gap_max_s * fps)
+    merged = []
+    for r in runs:
+        if merged:
+            gap_frames = r[0] - merged[-1][1] - 1
+            if serve_zone_y:
+                junta = (not _comeca_com_servico(r[0])) and gap_frames <= gap_max
+            else:
+                junta = gap_frames <= gap        # fallback sem serve_zone: gap fixo
+            if junta:
+                merged[-1][1] = r[1]
+                continue
+        merged.append(list(r))
 
     # evento global: bola-na-mao sustida (para afinar o FIM)
     hand_holds = []
