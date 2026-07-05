@@ -312,6 +312,42 @@ def segmentar_rallies_bola(
         if (fim - inicio) / fps >= min_rally_s:
             rallies.append((inicio, fim, f"{mo_i}/{mo_f}", conf))
 
+    # --- REGRA DO VASCO: um SERVICO dentro de um rally => o ponto ANTERIOR acabou ---
+    # Todo o servico marca o fim do ponto anterior (na ultima pancada antes do servico).
+    # Isto separa rallies colados por engano (ex.: um rally de 30s que sao 2 pontos).
+    def _e_servico_forte(f):
+        if ball_xy[f] is None or not serve_zone_y:
+            return False
+        boxes = player_boxes[f] if f < len(player_boxes) else []
+        sv = _box_mais_proxima(boxes, ball_xy[f])
+        if sv is None or _dist_ponto_box(ball_xy[f], sv) >= limiar_servico_px:
+            return False
+        cy = sum((a + b) / 2.0 for (a, b) in serve_zone_y) / len(serve_zone_y)
+        na_zona = any(ymin <= sv[3] <= ymax for (ymin, ymax) in serve_zone_y)
+        return na_zona and _formacao_servico(boxes, serve_zone_y, cy)
+
+    if serve_zone_y:
+        sep = int(3.0 * fps)
+        rallies2 = []
+        for (a, b, mo, cf) in rallies:
+            # servicos fortes DENTRO do rally (>3s depois do inicio)
+            internos = []
+            for f in range(a + sep, b):
+                if _e_servico_forte(f) and (not internos or f - internos[-1] > sep):
+                    internos.append(f)
+            if not internos:
+                rallies2.append((a, b, mo, cf)); continue
+            ini = a
+            for g in internos:
+                pcs_prev = [p for p in pancadas if ini < p < g]     # ultima pancada antes do servico
+                fim_prev = pcs_prev[-1] if pcs_prev else g - 1
+                if (fim_prev - ini) / fps >= min_rally_s:
+                    rallies2.append((ini, fim_prev, f"{mo}|split", cf))
+                ini = max(g - pre, fim_prev + 1)                    # novo ponto comeca no servico
+            if (b - ini) / fps >= min_rally_s:
+                rallies2.append((ini, b, "servico|split", "alta"))
+        rallies = rallies2
+
     dur = [(b - a) / fps for a, b, _, _ in rallies]
     mv = int(margem_video_s * fps)
     clips = [(a, min(n - 1, b + mv)) for a, b, _, _ in rallies]  # R8
