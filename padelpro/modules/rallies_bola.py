@@ -257,8 +257,9 @@ def segmentar_rallies_bola(
             return False
         if not any(ymin <= sv[3] <= ymax for (ymin, ymax) in serve_zone_y):
             return False
+        # ESTRITO (senao dispara serviços a mais e sobre-divide): exige parado E formacao
         return (_box_parada_antes(player_boxes, f0, ball_xy[f0], fps)
-                or _formacao_servico(boxes, serve_zone_y, cy_zone))
+                and _formacao_servico(boxes, serve_zone_y, cy_zone))
 
     # REGRA DO VASCO: o ponto so' acaba se a PROXIMA PANCADA for SERVICO.
     # -> junta corridas de bola separadas por um gap SE a seguinte NAO comeca por servico
@@ -384,6 +385,9 @@ def segmentar_rallies_bola(
         a_next = rallies[i + 1][0]
         if b >= a_next:
             rallies[i] = (a, max(a, a_next - 1), mo, cf)
+
+    # filtrar fragmentos curtos (a divisao/de-overlap podem criar pedacos < min_rally_s)
+    rallies = [(a, b, mo, cf) for (a, b, mo, cf) in rallies if (b - a) / fps >= min_rally_s]
 
     dur = [(b - a) / fps for a, b, _, _ in rallies]
     mv = int(margem_video_s * fps)
