@@ -390,6 +390,11 @@ def segmentar_rallies_bola(
     # filtrar fragmentos curtos (a divisao/de-overlap podem criar pedacos < min_rally_s)
     rallies = [(a, b, mo, cf) for (a, b, mo, cf) in rallies if (b - a) / fps >= min_rally_s]
 
+    # VALIDADE: um rally real tem pelo menos 1 pancada detetada. Segmentos sem nenhuma pancada
+    # (bola a rolar/aquecimento) sao FALSOS -> descartar. (mata rallies-fantasma tipo P16.)
+    rallies = [(a, b, mo, cf) for (a, b, mo, cf) in rallies
+               if any(a <= p <= b for p in pancadas)]
+
     # REGRA DO VASCO (espacamento): 2 pontos reais tem sempre pausa entre eles (servidor recupera
     # a bola). Rallies consecutivos separados por < min_gap_rallies_s = divisao FALSA -> fundir.
     gap_min = int(min_gap_rallies_s * fps)
