@@ -205,8 +205,9 @@ def segmentar_rallies_bola(
     gap_fora_s=2.0,           # R2: bola sumida > isto (usado so' sem serve_zone)
     gap_max_s=8.0,            # com serve_zone: junta corridas ate' este gap se a seguinte NAO for servico
     min_gap_rallies_s=2.5,    # 2 pontos reais tem sempre pausa >= isto; rallies mais perto = divisao falsa -> fundir
-    zonas_cegas_y=None,       # bandas (pixeis) onde a bola some (fundo/vidro, primeiro plano). None -> usa serve_zone_y
-    gap_zona_cega_s=7.0,      # se a bola sumiu NUMA zona cega, tolera este gap maior antes de cortar (o ponto continua)
+    zonas_cegas_y=None,       # bandas (pixeis) onde a bola some a MEIO do rally. DISTINTO da serve_zone!
+                              #   None = regra DESLIGADA (so' util pos-treino, com bandas proprias fundo-vidro/rede)
+    gap_zona_cega_s=7.0,      # se a bola sumiu numa zona cega, tolera este gap maior (so' se zonas_cegas_y dado)
     janela_fim_s=5.0,         # R5: esperar isto por nova pancada (Vasco: 5s)
     min_rally_s=1.0,          # R7
     margem_video_s=2.0,       # R8: so' para o clip de video
@@ -269,7 +270,9 @@ def segmentar_rallies_bola(
     #    (o ponto continuou apos falha de detecao); so' separa quando a seguinte E' um servico.
     # REGRA DA ZONA CEGA (Vasco): se a bola sumiu numa zona onde costuma perder-se
     # (fundo/vidro, primeiro plano), o ponto provavelmente continua -> tolera gap maior.
-    zc = zonas_cegas_y if zonas_cegas_y else serve_zone_y
+    # zonas cegas TEM de ser distinto da serve_zone (senao a tolerancia extra funde pontos
+    # consecutivos no ponto de servico). None => regra DESLIGADA (so' liga com bandas proprias).
+    zc = zonas_cegas_y
     def _em_zona_cega(f):
         p = ball_xy[f]
         return p is not None and bool(zc) and any(ymin <= p[1] <= ymax for (ymin, ymax) in zc)
