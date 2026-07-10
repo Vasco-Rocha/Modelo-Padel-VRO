@@ -204,6 +204,7 @@ def segmentar_rallies_bola(
     frames_mao=None,          # K frames para confirmar bola na mao (default ~0.4s)
     gap_fora_s=2.0,           # R2: bola sumida > isto (usado so' sem serve_zone)
     gap_max_s=8.0,            # com serve_zone: junta corridas ate' este gap se a seguinte NAO for servico
+    min_gap_rallies_s=2.5,    # 2 pontos reais tem sempre pausa >= isto; rallies mais perto = divisao falsa -> fundir
     janela_fim_s=5.0,         # R5: esperar isto por nova pancada (Vasco: 5s)
     min_rally_s=1.0,          # R7
     margem_video_s=2.0,       # R8: so' para o clip de video
@@ -388,6 +389,18 @@ def segmentar_rallies_bola(
 
     # filtrar fragmentos curtos (a divisao/de-overlap podem criar pedacos < min_rally_s)
     rallies = [(a, b, mo, cf) for (a, b, mo, cf) in rallies if (b - a) / fps >= min_rally_s]
+
+    # REGRA DO VASCO (espacamento): 2 pontos reais tem sempre pausa entre eles (servidor recupera
+    # a bola). Rallies consecutivos separados por < min_gap_rallies_s = divisao FALSA -> fundir.
+    gap_min = int(min_gap_rallies_s * fps)
+    fundidos = []
+    for r in sorted(rallies, key=lambda x: x[0]):
+        if fundidos and (r[0] - fundidos[-1][1]) < gap_min:
+            a, b, mo, cf = fundidos[-1]
+            fundidos[-1] = (a, r[1], mo + "|fundido", "alta")   # estende o anterior
+        else:
+            fundidos.append(r)
+    rallies = fundidos
 
     dur = [(b - a) / fps for a, b, _, _ in rallies]
     mv = int(margem_video_s * fps)
