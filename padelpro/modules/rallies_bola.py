@@ -205,6 +205,8 @@ def segmentar_rallies_bola(
     gap_fora_s=2.0,           # R2: bola sumida > isto (usado so' sem serve_zone)
     gap_max_s=8.0,            # com serve_zone: junta corridas ate' este gap se a seguinte NAO for servico
     min_gap_rallies_s=2.5,    # 2 pontos reais tem sempre pausa >= isto; rallies mais perto = divisao falsa -> fundir
+    zonas_cegas_y=None,       # bandas (pixeis) onde a bola some (fundo/vidro, primeiro plano). None -> usa serve_zone_y
+    gap_zona_cega_s=7.0,      # se a bola sumiu NUMA zona cega, tolera este gap maior antes de cortar (o ponto continua)
     janela_fim_s=5.0,         # R5: esperar isto por nova pancada (Vasco: 5s)
     min_rally_s=1.0,          # R7
     margem_video_s=2.0,       # R8: so' para o clip de video
@@ -265,15 +267,24 @@ def segmentar_rallies_bola(
     # REGRA DO VASCO: o ponto so' acaba se a PROXIMA PANCADA for SERVICO.
     # -> junta corridas de bola separadas por um gap SE a seguinte NAO comeca por servico
     #    (o ponto continuou apos falha de detecao); so' separa quando a seguinte E' um servico.
+    # REGRA DA ZONA CEGA (Vasco): se a bola sumiu numa zona onde costuma perder-se
+    # (fundo/vidro, primeiro plano), o ponto provavelmente continua -> tolera gap maior.
+    zc = zonas_cegas_y if zonas_cegas_y else serve_zone_y
+    def _em_zona_cega(f):
+        p = ball_xy[f]
+        return p is not None and bool(zc) and any(ymin <= p[1] <= ymax for (ymin, ymax) in zc)
+
     gap_max = int(gap_max_s * fps)
+    gap_cega = int(gap_zona_cega_s * fps)
     merged = []
     for r in runs:
         if merged:
             gap_frames = r[0] - merged[-1][1] - 1
+            limite = gap_cega if _em_zona_cega(merged[-1][1]) else gap_max   # + tolerancia se zona cega
             if serve_zone_y:
-                junta = (not _comeca_com_servico(r[0])) and gap_frames <= gap_max
+                junta = (not _comeca_com_servico(r[0])) and gap_frames <= limite
             else:
-                junta = gap_frames <= gap        # fallback sem serve_zone: gap fixo
+                junta = gap_frames <= (gap_cega if _em_zona_cega(merged[-1][1]) else gap)
             if junta:
                 merged[-1][1] = r[1]
                 continue
@@ -315,7 +326,8 @@ def segmentar_rallies_bola(
             subiu = _subida_apos_servico(player_boxes, f0, servidor, fps, center_y)  # corre p/ a rede
             formacao = _formacao_servico(boxes0, serve_zone_y, center_y)           # 3 na linha + parceiro na rede
             inicio = max(0, f0 - pre)
-            # servico "de livro" = na zona + (parado antes / sobe a' rede / formacao correta)
+            # servico = na zona + (parado antes / SERVIDOR corre p/ a rede / formacao).
+            # NOTA: no padel a bola NAO sobe (servico por baixo); o sinal e' o jogador a subir a' rede.
             sinais = sum([preparado, na_zona, subiu, formacao])
             if na_zona and sinais >= 2:
                 mo_i, conf = "servico", "alta"
