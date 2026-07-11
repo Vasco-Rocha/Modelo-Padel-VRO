@@ -17,6 +17,19 @@ Contexto para retomar o desenvolvimento (ex.: no Claude Code).
 "jogo" pela *ausência de bola*, uma muleta do detetor fraco. Com um detetor forte a bola está
 quase sempre visível (também entre pontos, onde é bola REAL) e a regra funde tudo.
 
+**⚠️ ERRO A NÃO REPETIR — jogadores:** o `player_boxes` usado nas experiências veio de um
+`yolov8n` improvisado dentro do notebook do BlurBall (só vê os 4 jogadores em **53%** dos frames).
+**Foi um atalho errado.** A deteção de jogadores **é do `padel_analytics`** (João Silva) — já está
+definida, validada, e faz **tracking**; este repo foi construído por cima dela. A objeção dos
+"metros" é fraca: ele deteta em **píxeis** e só depois converte por homografia → ir buscar as boxes
+em píxeis **antes** da conversão. **Não é treinar outro modelo — é ligar o que já existe.**
+Isto destranca a regra da FORMAÇÃO (parceiro na rede + adversário cruzado), que dá **0 falsos**.
+
+**➡ Falta a MONTAGEM ponta-a-ponta.** As peças estão no repo e provadas, mas o `pipeline.py`
+ainda corre o fluxo antigo. Não há um "vídeo → tempo útil". Montar:
+`vídeo → BlurBall (traj.csv) → limpar() → detetar_servicos() → rallies → clips/JSON`.
+Tudo em **píxeis** (é onde vivem as regras: linhas do campo, ressalto, formação).
+
 **➡ Próximo trabalho: implementar `docs/SPEC_M1_TEMPO_UTIL.md`** — serviço como fronteira do
 ponto (bola na mão → ressalta aos pés → raquetada → servidor arranca), travessias alternadas da
 rede como pancadas (inferidas, robusto a oclusão), e fins por rede/duplo-toque/6s.

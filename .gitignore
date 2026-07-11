@@ -11,3 +11,6 @@ data/*.mp4
 !data/.gitkeep
 .pytest_cache/
 .DS_Store
+
+# Ambiente Claude (local)
+.claude/
