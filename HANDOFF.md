@@ -2,6 +2,34 @@
 
 Contexto para retomar o desenvolvimento (ex.: no Claude Code).
 
+---
+## ⚡ ESTADO ATUAL (11 jul 2026) — LER PRIMEIRO
+
+**Detetor de bola: mudou.** O YOLO (`best.pt`, recall 67%) foi substituído pelo **BlurBall**
+(detetor temporal, recall 85.6% out-of-box). Integração em `padelpro/modules/blurball_io.py`.
+- ❌ **Via A (fine-tune do YOLO) FALHOU e está fechada** — `best_v2` ficou PIOR que o `best.pt`
+  (recall 57%, precisão 39%). **Não repetir.**
+- ✅ Ponto de operação validado: `PONTO_OPERACAO` em `blurball_io.py`
+  (`vmin=6, gap_fora_s=1.0, serve_zone_y=None`) → **13 rallies, recall 99%**, 205s.
+  (baseline YOLO: 10 rallies, recall 67%, 106s.) Ground-truth: **117s / 12 rallies**.
+
+**O gargalo mudou de sítio:** já não é o detetor — é a **SEGMENTAÇÃO**. As regras v9 mediam
+"jogo" pela *ausência de bola*, uma muleta do detetor fraco. Com um detetor forte a bola está
+quase sempre visível (também entre pontos, onde é bola REAL) e a regra funde tudo.
+
+**➡ Próximo trabalho: implementar `docs/SPEC_M1_TEMPO_UTIL.md`** — serviço como fronteira do
+ponto (bola na mão → ressalta aos pés → raquetada → servidor arranca), travessias alternadas da
+rede como pancadas (inferidas, robusto a oclusão), e fins por rede/duplo-toque/6s.
+**Falta uma calibração: o `y` da linha da rede** (um número, desbloqueia 3 regras).
+
+**Diretriz de produto:** *nunca perder um ponto; mais lixo é preferível a menos tempo útil.*
+Otimizar **recall**, não precisão.
+
+Docs: `docs/SPEC_M1_TEMPO_UTIL.md` (o desenho), `docs/PLANO_TEMPO_UTIL_pos_BlurBall.md` (o plano),
+`docs/REGRAS_CONSOLIDADAS_todos_prompts.md` (todas as regras v1→v9), `docs/ground_truth_parada4.md`.
+
+---
+
 ## O que é
 Camada de análise de padel que corre **por cima** do output do repo
 [`padel_analytics`](https://github.com/Joao-M-Silva/padel_analytics) (do João Silva).
