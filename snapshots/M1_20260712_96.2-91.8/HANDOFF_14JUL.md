@@ -123,6 +123,13 @@ Duas cópias de segurança, ambas correm sozinhas:
 
 ## **O SEGUNDO VÍDEO. Outra câmara.**
 
+# 📖 **A RECEITA ESTÁ ESCRITA: `RECEITA_VIDEO_NOVO.md`**
+> Passo a passo, do vídeo até ao tempo útil. **Ler ANTES de começar.**
+> Ferramentas novas (13 jul): `padelpro-vision/json_para_pkl.py` (o conversor dos jogadores, que
+> se tinha **perdido**) e `padelpro-vision/verificar_video_novo.py` (**correr sempre** antes de o
+> pipeline tocar nos dados novos — um ficheiro no feitio errado não dá erro, dá **números errados
+> em silêncio**).
+
 É o único teste que separa as **LEIS do Vasco** (sobrevivem) dos **AJUSTES do Claude** (não sobrevivem).
 
 **COMPROMISSO ASSUMIDO, ANTES DE VER OS RESULTADOS:**
