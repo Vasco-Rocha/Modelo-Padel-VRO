@@ -27,9 +27,12 @@ CAL  = "calibracao_campo.json"
 VIDEO = "../Parada4.mp4"
 BOXES = "../dados_parada4/player_boxes_parada4.pkl"
 
-# ground-truth: 12 rallies / 117 s, anotados à mão pelo Vasco
+# ground-truth: 13 rallies / 119,6 s, anotados à mão pelo Vasco
+# ⚠️ 13 jul: o Vasco ACRESCENTOU o 13.º (289,1s -> fim do vídeo). Faltava. O que eu chamava
+#    'segmento FALSO' era um PONTO A SÉRIO — e a precisão estava a castigar-me por ACERTAR.
 GT = [(38.0,41.5),(46.8,67.5),(77.6,85.5),(95.9,111.1),(122.4,135.9),(157.9,169.4),
-      (178.1,186.5),(197.0,202.1),(210.5,216.3),(229.9,237.3),(249.6,255.0),(263.8,276.4)]
+      (178.1,186.5),(197.0,202.1),(210.5,216.3),(229.9,237.3),(249.6,255.0),(263.8,276.4),
+      (289.1,291.7)]   # 13.º: o Vasco confirmou (13 jul) — é serviço, e fica CORTADO pelo fim do vídeo
 
 # ===========================================================================================
 #  🎛️  OS INTERRUPTORES.   Qualquer regra se desliga aqui, sem tocar em código.
@@ -51,6 +54,7 @@ REGRAS = {
     "S17_REDE":       True,   # 🔒 FECHADA — vira/pára na rede, longe de box => fim certo
     "S18_MAO_PARADA": True,   # bola parada na box, sem mudar de campo => fim certo
     "PAN_TEM_JOGADOR":True,   # 🆕 uma raquetada TEM de ter um jogador ao pé. Senão, ninguém bateu.
+    "PAUSA_MINIMA":   True,   # 🆕 regra PERDIDA dos prompts (v7.1/v7.7/v8) — ver abaixo
     "S18_MAO_PASSE":  False,  # ⛔ BLOQUEADA PELO RESSALTO (M3) — ver abaixo
     "S19_2_TOQUES":   False,  # ⛔ BLOQUEADA PELA PAREDE — ver abaixo
 }
@@ -73,6 +77,39 @@ REGRAS = {
 #    bater na bola ENTRE os pontos. Para a distinguir era preciso saber que ali não decorre um
 #    ponto ⇒ detetor de serviço ⇒ M3. Outra vez.
 PAN_DIST_MAX = 3.0  # ✅ em MEIOS-CAMPOS locais (não são píxeis)
+
+# 🕳️ PAUSA_MINIMA — REGRA PERDIDA DOS PROMPTS (v7.1/v7.7/v8), NUNCA IMPLEMENTADA.
+#    "Pausa média entre pontos: 5–15 s."
+#    Uma pausa CURTA DEMAIS é IMPOSSÍVEL: entre pontos, os jogadores têm de ir buscar a bola e
+#    posicionar-se para o serviço. Se o pipeline produz uma pausa de 2,6 s, então a CAUDA do
+#    segmento anterior está esticada — e NÃO É PRECISO SABER PORQUÊ para a aparar.
+#    (Era o PONTO 1: cauda de 3,5 s. Nenhuma outra regra a apanhava — a raquetada que a esticava
+#     era do INTERVALO, com um jogador ao pé, indistinguível de jogo. Só o M3 a mataria.
+#     Esta regra mata-a de graça, sem saber o que lá está.)
+#
+#    ⚠️ SÓ APARA A CAUDA. NUNCA mexe no INÍCIO do segmento seguinte
+#       ⇒ é ESTRUTURALMENTE INCAPAZ de perder um serviço. (Medido: recall intacto até aos 6 s.)
+#
+# 🧠 APRENDIDA POR DUPLA (Vasco, 13 jul):
+#    "esta regra tem uma MÉDIA ASSOCIADA A CADA JOGADOR, que podes ir notando ao longo do vídeo"
+#    ⇒ o número NÃO é meu. Sai do PRÓPRIO VÍDEO, em 2 passagens:
+#         1ª — corre sem a regra e observa as pausas que ele próprio produziu
+#         2ª — pausa mínima = mediana − K×MAD  (robusto a outliers; MAD, não desvio-padrão)
+#    Neste jogo: mediana 10,9 s (a real é 10,5 — acertou) ⇒ mínima aprendida 5,3 s.
+#    🔒 CHÃO DE SEGURANÇA (decisão do Vasco): NUNCA descer abaixo de 4 s, aprenda o que aprender.
+PAUSA_CHAO = 4.0   # 🔒 chão do Vasco — a regra nunca apara abaixo disto
+PAUSA_K    = 2.5   # ⚠️ AJUSTE — nº de MADs abaixo da mediana. 2,5 = limiar clássico de outlier.
+                   #    (K=2,0 dava +0,8 de precisão e −0,1 de recall. A diretriz manda no recall.)
+
+
+def pausa_aprendida(M):
+    """1ª passagem: o RITMO DESTA DUPLA, lido do próprio vídeo. Nunca abaixo do chão do Vasco."""
+    if len(M) < 3:
+        return PAUSA_CHAO
+    p = np.array([(M[i+1][0] - M[i][1]) / FPS for i in range(len(M) - 1)])
+    med = np.median(p)
+    mad = np.median(np.abs(p - med))
+    return max(PAUSA_CHAO, med - PAUSA_K * mad)
 
 # ⛔ S18_MAO_PASSE — REGRA DO VASCO (13 jul), CERTA, MAS BLOQUEADA. NÃO LIGAR SEM O M3.
 #    "se vai da mão para o adversário SEM ser cruzado no quadrado de serviço, sem ser em regime
@@ -414,6 +451,18 @@ def rallies(CR, PAN, FIM=()):
             M[-1][1] = max(M[-1][1], b)
         else:
             M.append([a, b])
+
+    # PAUSA MÍNIMA (regra perdida dos prompts + a nota do Vasco: aprender por dupla).
+    # Uma pausa curta demais entre pontos é IMPOSSÍVEL: a CAUDA do anterior está esticada.
+    # 2 passagens: aprende o ritmo DESTE jogo, depois apara. Só a cauda; nunca o início.
+    if REGRAS["PAUSA_MINIMA"]:
+        pmin = pausa_aprendida(M)
+        for i in range(len(M) - 1):
+            if (M[i+1][0] - M[i][1]) / FPS < pmin:
+                novo = M[i+1][0] - int(pmin * FPS)
+                if novo > M[i][0] + DUR_MIN * FPS:      # nunca matar o segmento
+                    M[i][1] = novo
+
     return [(a, b) for a, b in M]
 
 
@@ -446,8 +495,8 @@ def main():
           f"fins certos (rede/mão) {len(FIM)}")
     M = rallies(CR, PAN, FIM)
     r = avaliar(M)
-    print(f"\n>>> {r['n']} pontos (reais: 12) | {r['tempo']:.1f}s (reais: 117s)")
-    print(f">>> servicos {r['servicos']}/12")
+    print(f"\n>>> {r['n']} pontos (reais: {len(GT)}) | {r['tempo']:.1f}s (reais: {sum(b-a for a,b in GT):.1f}s)")
+    print(f">>> servicos {r['servicos']}/{len(GT)}")
     print(f">>> RECALL {r['recall']:.1f}%   PRECISAO {r['precisao']:.1f}%   F1 {r['f1']:.1f}")
 
     if "--video" in sys.argv:

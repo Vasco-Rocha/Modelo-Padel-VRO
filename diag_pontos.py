@@ -4,25 +4,28 @@ DIAGNOSTICO POR PONTO — onde e' que o M1 perde, ponto a ponto. So OBSERVA.
 
     python3 diag_pontos.py
 """
-import sys
+import sys, json, pickle
 import numpy as np
 sys.path.insert(0, ".")
 from gerar_tempo_util import (carregar, vai_e_vem, tracklets, cruzamentos, pancadas,
-                              rallies, avaliar, FPS, N_FRAMES, GT)
+                              rallies, avaliar, fim_certo, CAL, BOXES, FPS, N_FRAMES, GT)
 
 R, prof = carregar()
 R = vai_e_vem(R)
 tks = tracklets(R)
 CR = cruzamentos(R, tks, prof)
-PAN = pancadas(R)
-M = rallies(CR, PAN)
+cal = json.load(open(CAL))
+boxes = pickle.load(open(BOXES, "rb"))["player_boxes"]
+PAN = pancadas(R, cal, boxes)
+FIM = fim_certo(R, cal, boxes)
+M = rallies(CR, PAN, FIM)
 
 cob = np.zeros(N_FRAMES, bool)
 for a, b in M:
     cob[max(a, 0):min(b, N_FRAMES - 1) + 1] = True
 
 print("=" * 90)
-print("OS 12 PONTOS REAIS — o que o pipeline apanhou")
+print(f"OS {len(GT)} PONTOS REAIS — o que o pipeline apanhou")
 print("=" * 90)
 print("%-3s %-14s %-6s %-8s %-8s %-7s %s" %
       ("#", "GT (s)", "dur", "apanhou", "falta", "segs", "onde falha"))
@@ -49,7 +52,7 @@ for k, (g0, g1) in enumerate(GT, 1):
           (k, f"{g0:.1f}-{g1:.1f}", g1 - g0, ap, falta, len(segs),
            " + ".join(onde) or "ok"))
 print("-" * 90)
-print(f"TOTAL perdido: {total_fn:.1f}s de 117s")
+print(f"TOTAL perdido: {total_fn:.1f}s de {sum(b-a for a,b in GT):.1f}s")
 
 print()
 print("=" * 90)

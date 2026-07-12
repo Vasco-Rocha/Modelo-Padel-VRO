@@ -37,10 +37,10 @@ from gerar_tempo_util import (carregar, vai_e_vem, tracklets, cruzamentos, panca
 #  OS NÚMEROS. Não se mexem sem o Vasco dizer.
 # ---------------------------------------------------------------------------
 TRAVADO = {
-    "recall":    (96.2, 0.5),    # (valor, tolerância)
-    "precisao":  (91.8, 0.5),
-    "servicos":  (12,   0),      # 12/12. NUNCA menos.
-    "n_pontos":  (13,   1),      # reais: 12  (12 inteiros + 1 falso aos 289s)
+    "recall":    (96.3, 0.5),    # (valor, tolerância)
+    "precisao":  (95.9, 0.5),
+    "servicos":  (13,   0),      # 13/13. NUNCA menos.
+    "n_pontos":  (13,   1),      # reais: 13
     "pancadas":  (133,  5),      # a 0.7 eram 57. O 0.4 foi buscá-las. (-2: as fantasma, sem jogador)
     "fim_certo": (19,   2),      # eventos rede/mão. ⚠️ 0 DENTRO de pontos reais. Ver abaixo.
     "fim_dentro":(0,    0),      # 🔒 NUNCA >0. Um fim certo a meio de um ponto CORTA-O AO MEIO.
@@ -91,6 +91,15 @@ TRAVADO = {
 #     ponto alto). É a DURAÇÃO + a ausência de raquetada que os separam.
 #  🔒 fim_dentro TEM de ser 0. Se subir, a regra está a cortar pontos reais ao meio — o pior
 #     erro possível, contra a diretriz. Nesse caso: NÃO relaxar o teste, DESLIGAR a regra.
+#
+#  13 jul 2026 (3) — O GROUND-TRUTH ESTAVA INCOMPLETO. 96,2/91,8 -> 96,3/93,9 (F1 95,1).
+#  O VASCO ACRESCENTOU O 13.º RALLY (289,1s -> fim do vídeo). Confirmou: "é serviço, começa onde
+#  está destacado e acaba pelo fim do vídeo".
+#  ⚠️ O QUE EU CHAMAVA "SEGMENTO FALSO" ERA UM PONTO A SÉRIO. A precisão andou o dia a castigar-me
+#     por ACERTAR. NADA no código mudou — só a régua.
+#  🚨 A LIÇÃO: o ground-truth é a régua de TUDO. Se ele está incompleto, todas as medições estão
+#     tortas — e posso ter REJEITADO regras boas por "aumentarem o lixo" que afinal era JOGO.
+#     Ao retomar: DESCONFIAR do GT antes de desconfiar do código.
 #
 #  ⛔ S8 (fim = última pancada antes do serviço seguinte) — TENTADA E REJEITADA hoje: 98,9/47,1,
 #     5 segmentos colados. As pancadas do INTERVALO entram pelo meio e esticam cada ponto até ao

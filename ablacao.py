@@ -108,6 +108,7 @@ TESTES = [
     ("cruzamento profundo",    dict(over=dict(MIN_PROF=0.0))),
     ("vai-e-vem (B8)",         dict(sem={"vai_e_vem"})),
     ("min_det (tracklets)",    dict(over=dict(MIN_DET=1))),
+    ("PAUSA MINIMA (prompts)",  dict(flags={"PAUSA_MINIMA": False})),
 ]
 
 
