@@ -283,10 +283,26 @@ def filtrar_espectadores(player_boxes, campo: Campo, margem=35, tol=25, max_frac
                 fora += 1
         passo1.append(keep)
 
+    # passo 2 -- IMOVEIS, com a SALVAGUARDA do Vasco:
+    # so' pode matar quem tem os PES FORA DO CAMPO. Quem esta' DENTRO e' IMUNE.
+    # Por construcao, esta regra NUNCA pode matar um jogador -- esteja ele parado ou nao,
+    # de cima ou de baixo. Um jogador dentro do campo nao e' um espectador, ponto.
+    #
+    # Porque ainda e' precisa: o passo 1 tem `margem` px de folga (para nunca cortar um
+    # jogador encostado ao vidro). Publico encostado do lado de FORA sobrevive a essa margem.
+    # E' esse que os imoveis apanham -- um jogador MOVE-SE, um espectador NAO.
+    #
+    # (Sem a salvaguarda, a regra matava os jogadores do FUNDO: 25 px la' valem ~1,7 m
+    #  -- a perspetiva esmaga tudo -- e num rally de 20 s "25% do tempo no mesmo sitio"
+    #  sao 5 SEGUNDOS. Um jogador de fundo passa isso parado a' espera do resto.)
+    dentro_estrito = lambda b: campo.dentro_do_campo(b, margem=0, margem_fundo=0)
+
     cont = {}
     for f in passo1:
         vistos = set()
         for b in f:
+            if dentro_estrito(b):
+                continue                                  # IMUNE
             x, y = pes(b)
             cel = (int(x // tol), int(y // tol))
             if cel not in vistos:
@@ -299,6 +315,9 @@ def filtrar_espectadores(player_boxes, campo: Campo, margem=35, tol=25, max_frac
     for f in passo1:
         keep = []
         for b in f:
+            if dentro_estrito(b):
+                keep.append(b)
+                continue                                  # IMUNE
             x, y = pes(b)
             if (int(x // tol), int(y // tol)) in mortos:
                 imoveis += 1
