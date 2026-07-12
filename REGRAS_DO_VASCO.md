@@ -43,6 +43,64 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 
 ---
 
+## 🔴 A CASCATA DOS JOGADORES — a ORDEM importa   *(Vasco, 13 jul 2026, depois de ver as boxes do repo do João)*
+
+> *"há coisas a ajustar mas a maior parte das vezes estão certas."*
+> As boxes do `PlayerTracker` do João **estão boas**. O que falta não é um detetor melhor — é
+> **aplicar-lhes as regras do jogo, por esta ordem**:
+
+| # | regra | porquê |
+|---|---|---|
+| **1** | 🦶 **OS PÉS NÃO PODEM SAIR DO POLÍGONO.** O polígono é o **CHÃO do campo — e INCLUI OS ESPAÇOS LATERAIS** (é por lá que eles saem no **jogo exterior**). | mata os espectadores. ⚠️ **NÃO é só a área das linhas** — se fosse, cortava os jogadores em jogo exterior, que é jogo legal. |
+| **2** | 👥 **NUNCA MAIS DE DOIS. E são sempre 2 CONTRA 2** *(por LADO da rede)*. | é uma verdade do **jogo**, não um limiar. Permite **baixar o `CONF`** do detetor sem pagar precisão. |
+| **3** | 👀 **OS DOIS DE CIMA TÊM DE ESTAR SEMPRE VISÍVEIS.** | a câmara vê-os sempre. Se só aparece **um**, o outro **não desapareceu** — está lá. **Vai procurá-lo** *(ver 4)*. |
+| **4** | 🔗 **CONTINUIDADE** *(J5 — "a única regra que ACRESCENTA informação")*. **"Se não os vês, temos de PERCEBER PORQUÊ não os vês."** Visto no frame 100 e no 104 ⇒ **interpola** 101-103. | **A ausência NÃO é um buraco. É uma pergunta.** ⚠️ **NÃO é um filtro** — não se descarta o frame. **PREENCHE-SE.** |
+| **5** | 🛡️ **OS DE BAIXO INVISÍVEIS ⇒ ESTÃO EM ZONA DE DEFESA.** | 🔑 **A AUSÊNCIA É O SINAL.** A câmara é baixa e **corta os de baixo quando eles recuam**. Logo: **não os ver não é informação perdida — é a informação de que RECUARAM.** *(É a J7+J8, agora formalizada: a informação não se perde, **muda de forma**.)* |
+
+> 🚨 **NÃO DESCARTAR FRAMES.** Nenhuma destas regras é um filtro que deita fora o frame. A #1 e a
+> #2 **limpam**; a #3, a #4 e a #5 **ACRESCENTAM**. É a diferença entre um detetor e um modelo do jogo.
+
+> ⚠️ **PORQUE É QUE ESTAS REGRAS SE PERDEM** (o Vasco perguntou, 13 jul: *"porque é que te vais
+> esquecendo destas regras?"*): **TODAS as regras de jogadores estão DESLIGADAS.** Vivem em
+> `padelpro/modules/servico.py` e **NÃO CORREM EM LADO NENHUM** — o pipeline que dá os 96,3% usa
+> **só a bola**. Como não correm, não são testadas; como não são testadas, não aparecem nos
+> números; e o que não aparece nos números, esquece-se.
+> **É a mesma doença da S12 e da S8.** A cura é a mesma: **pô-las a correr e a serem medidas.**
+
+---
+
+### 🔴 J6+ — **SEGUIR O JOGADOR PELA ROUPA** *(Vasco, 13 jul — o MECANISMO, que faltava)*
+
+> *"Detetas uma **bounding box consistente** nos primeiros tempos · detetas a **cor da roupa** ·
+> passas **só a seguir essa cor da roupa**."*
+
+**O detetor serve só para ARRANCAR. Depois a IDENTIDADE é a COR.**
+
+```
+1. ARRANQUE   — nos primeiros tempos, encontra uma box CONSISTENTE (estável, de confiança)
+2. APRENDE    — tira dela a assinatura de cor  (torso + calções + pernas + ténis)
+3. SEGUE      — a partir daí, segue a COR. Já não o detetor.
+```
+
+🔑 **PORQUE É QUE ISTO É FORTE:** a cor **não se perde** quando a box fica **cortada** pela borda,
+**meia tapada**, ou com **confiança baixa** — que é **exactamente** onde o detetor falha (os
+jogadores de baixo!). **A identidade sobrevive à falha da deteção.**
+*(É a J6 — que só dizia "assinatura por torso+calções+pernas+ténis" — agora com o MECANISMO.)*
+
+### ✅ E ISTO DESBLOQUEIA A **J9** — que estava dada como MORTA
+
+A J9 (*"aprender as cores no início de cada ponto"*) estava **⛔ bloqueada por dependência
+circular**: precisava de saber **onde começam os pontos**, e era isso que o M1 andava a descobrir.
+
+# 🎉 **JÁ NÃO É CIRCULAR.** O M1 dá **13/13 serviços** (13 jul).
+
+**Sabemos onde cada ponto começa, treze vezes.** E o início do ponto é **o frame mais limpo do
+jogo**: jogadores **separados**, **parados**, **em formação**. É o melhor sítio possível para
+aprender as cores — e agora é **encontrável**.
+👉 **A J9 passa de ⛔ BLOQUEADA a 🟢 PRONTA A IMPLEMENTAR.**
+
+---
+
 ## SERVIÇO / M1
 
 | # | Regra | Estado | Onde |
