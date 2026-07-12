@@ -1,13 +1,13 @@
 # 🎬 RECEITA — um VÍDEO NOVO, do zero até ao tempo útil
 
-**Para o 2.º vídeo (outra câmara).** Escrita em 13 jul 2026, com o pipeline em `96,3 / 95,9`.
+**Para o 2.º vídeo (outra câmara).** Escrita em 13 jul 2026, com o pipeline em `96,8 / 95,4`.
 
 ---
 
 ## 🛑 ANTES DE COMEÇAR — O COMPROMISSO
 
 > **NÃO SE TOCA EM NENHUM PARÂMETRO.**
-> `L_RAQUETE=11` · `SILENCIO=4` · `PAD_ANTES=1,6` · `MIN_PROF=0,35` · `PAN_DTHETA=20` · `PAN_L=7`
+> `L_RAQUETE=11` · `SILENCIO=4` · `PAD_ANTES=1,6` · `MIN_PROF=0,15` · `PAN_DTHETA=20` · `PAN_L=7`
 > `RED_DTHETA=60` · `MAO_L=3` · `MAO_DUR=15` · `PAUSA_K=2,5` — **vão exactamente como estão.**
 >
 > **Afiná-los ao vídeo novo torna o teste INÚTIL** — passamos a ter dois vídeos decorados em vez
