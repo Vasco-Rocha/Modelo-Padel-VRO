@@ -58,6 +58,21 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | S10 | **Duplo ressalto** — o serviço é a **única** jogada em que a bola ressalta **obrigatoriamente dos dois lados** da rede (o servidor deixa-a cair; e tem de ressaltar no quadrado antes de o recetor lhe bater). **Corolário:** os dois ressaltos estão em lados opostos ⇒ **um está SEMPRE em cima** (o lado que a câmara vê). O de baixo pode estar **tapado pelo jogador** — não invalida. | 📋 por implementar | — |
 | S11 | **Mudança de servidor** — 2 pontos válidos seguidos do mesmo lado ⇒ mudou o jogo ⇒ serve o outro par. | ⚠️ **pista fraca**: no **tie-break** o serviço roda a cada 2 pontos e isto não vale. | — |
 
+| **S12** | **FIM DO PONTO — 4 s depois da última PANCADA.** Se não se detetar pancada nenhuma, corta com **2-3 s** de margem. *(Substitui os dois erros anteriores: cortar quando a bola deixa de cruzar = **cedo demais**; esticar enquanto a bola andar = **tarde demais** — "a bola pode andar e já ter batido duas vezes".)* | ✅ implementada (v7/v8) | `m1_tempo_util.py` |
+| **S13** | ⏱️ **A TIMELINE NUNCA ANDA PARA TRÁS.** Um segmento nunca se sobrepõe ao anterior nem repõe um frame já usado. **Se dois segmentos se tocam, são O MESMO PONTO** — fundem-se. | ✅ implementada (v8). Corrigiu **6 saltos para trás** e arrumou 21 segmentos em **15 pontos** (os reais são 12). | `m1_tempo_util.py` |
+| S14 | **Fim verdadeiro do ponto** = a bola bate **DUAS VEZES no chão sem ninguém lhe tocar**. | 📋 a regra certa, **bloqueada** pelo detetor de ressalto (7/12). O S12 é a aproximação enquanto isso. | — |
+
+| **S15** | 🔴 **MÃO vs RAQUETE** — *"NÃO DISPARAR SERVIÇOS. Só disparar se a bola vier da mão para o chão para a raquete."* A bola da **mão é LENTA**; a da **raquete é RÁPIDA**. Medido no `L` do BlurBall: **serviços L=17,4 · falsos (passagens à mão) L=2,7**. | ✅ implementada. **+18 pontos de PRECISÃO** (65,8% → 83,9%). Mata 24 dos 27 falsos. | `m1_tempo_util.py` |
+| **S16** | ⚖️ **DÚVIDA = MAIS MARGEM; CERTEZA = CORTE RENTE.** Se há pancada detetada → sei que acabou → corto a **2 s**. Se NÃO há pancada → estou na dúvida → dou **5 s**. *(Eu tinha implementado ao CONTRÁRIO — 4 s quando sabia, 2 s quando duvidava. Cortava os pontos 12/13/14 a meio.)* **Os 5 s são para DECIDIR, não para MOSTRAR.** | ✅ implementada. **+9 pontos de precisão** (83,9% → 92,9%). | `m1_tempo_util.py` |
+| S17 | **Bola na rede → ponto terminado, de certeza.** Corte a 0,5 s. Não há dúvida a gerir. | 📋 por implementar | — |
+| S18 | **Mão/corpo na bola → ponto terminado** (avaliar **postura corporal** — a forma da box muda quando alguém se baixa). E: **jogadores a passar a bola com a mão ⇒ o ponto JÁ acabou e ainda NÃO começou.** | 📋 por implementar | — |
+
+> 🎈 **BUG ABERTO — O BALÃO** (Vasco, 12 jul, v11): a regra S15 mede o `L` **no cruzamento da rede**.
+> Mas o balão **sai da raquete depressa e CHEGA LENTO** — no cruzamento tem `L` baixo e é rejeitado
+> como se fosse passagem à mão. **Parte o ponto 3 e o 6→7.**
+> ❌ Tentativa falhada: medir o `L` **máximo do tracklet** (a raquetada na origem) — não resolveu
+> (recall igual, precisão pior). **A causa é outra. Olhar aos pontos 3 e 6/7 DIRETAMENTE, não às médias.**
+
 > ⚖️ **LEI DE DESENHO (12 jul):** **nenhuma regra do jogo pode VETAR um candidato** — há sempre uma
 > exceção legítima (ponto de ouro, tie-break, let). Todas **pontuam**; nenhuma corta. Escolhe-se a
 > **sequência** globalmente mais consistente. Um falso paga caro em vários sítios; uma exceção paga num só, e passa.
