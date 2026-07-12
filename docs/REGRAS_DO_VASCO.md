@@ -16,8 +16,13 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | B3 | **Velocidade por 2 frames** — a velocidade da bola calcula-se em 2 frames, não em 1. | 📋 por implementar | — |
 | B4 | **Estados da bola** — a bola tem estados (no ar, no chão, na mão, parada). | 📋 por formalizar | — |
 | B5 | **Cima vs baixo** — a bola alta e a bola rasteira são coisas diferentes. | 📋 por formalizar | — |
-| B6 | **2 cliques = direção** — dois pontos dão a direção (o BlurBall já dá `L` e `Theta`). | 📋 por usar | — |
+| B6 | **2 cliques = direção** — dois pontos dão a direção (o BlurBall já dá `L` e `Theta`). | ✅ **RESOLVIDO — e melhor do que pedias**: o `Theta` dá a direção com **2° de erro numa ÚNICA deteção**, sem precisar de dois pontos. **+10,2 recall e +2,5 precisão** no M1 (74,1/66,6 → **84,3/69,1**). Estava no CSV desde o 1.º dia. | `m1_tempo_util._tracklets()` |
 | B7 | **Bola fora >2s = serviço** | ✅ nas regras v9 | — |
+| B8 | **Coerência temporal** — uma deteção sozinha, sem vizinho compatível em ±2 frames (raio 45px/frame), é lixo. *"Confirmar com um antes e um pós."* Apanha os ténis brancos e os pontos brancos no público. | 🧪 **testada 12 jul**: mata 275 frames de lixo por 99 de rally (2,8:1). Custo no recall: -2,8 pp. **Vale a pena.** | por implementar |
+| B9 | **Não inventar perto dos cegos** — ao contrário dos jogadores, na bola **não se interpola** por cima de buracos. Ausência é ausência. | 📋 por implementar | — |
+| B10 | **`L` ≈ 0 é suspeito** — a bola em jogo está borrada; um ténis parado não. Medido: L mediana 2,5 / p90 12,4. **Sinal fraco isolado** (34% das deteções têm L<2), só serve combinado com B8. | 🧪 medido, não conclusivo sozinho | — |
+
+> ⛔ **B-nota (12 jul):** **45% das deteções de bola caem FORA dos rallies — e são bola A SÉRIO** (o intervalo entre pontos: apanhar, passar, preparar). **Nenhuma regra de bola resolve isto.** Só o M3. Ver `project_threshold_04_fechado`.
 
 ---
 
@@ -46,9 +51,16 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | S3 | **Formação lida SÓ nos 2 de cima** ← **a decisão de hoje** | ✅ implementada (12 jul) | `formacao_de_cima()` |
 | S4 | **Quadrado de serviço cruzado** — a bola do serviço cai na **diagonal**. **0 falsos.** | ⚠️ implementada, mas precisa do ressalto (bola a 46% → subir para 76% com thr=0.4) | — |
 | S5 | **Serviço multi-fator** — nenhum sinal sozinho chega; combinar. | ✅ é a arquitetura atual | — |
-| S6 | **Alternância** — os serviços alternam de lado. | 📋 por implementar | — |
+| S6 | **Alternância** — os serviços alternam de lado. **Mas o lado só muda quando o PONTO CONTA**: falta/let repete o mesmo lado ⇒ numa corrida do mesmo lado, o que vale é **o ÚLTIMO**. | 📋 por implementar. ⚠️ **NÃO é lei** — no **ponto de ouro** quem recebe escolhe o lado e pode repetir. | `m1_tempo_util.py` |
 | S7 | **Lado do serviço** distingue **ace** de **falta**. | 📋 por implementar | `SPEC_M1_TEMPO_UTIL.md` |
 | S8 | **Ponto só acaba se a próxima pancada for serviço** | ✅ nas regras v9 | — |
+| **S9** | 🔴 **A SEQUÊNCIA DO SERVIÇO** (12 jul) — `SAI DA MÃO → CHÃO → RAQUETE → RESSALTO DENTRO DO QUADRADO CRUZADO → pancada seguinte segue o ponto`. **Sem ressalto no quadrado cruzado NÃO HÁ SERVIÇO** (condição necessária, não pontuação). E: **não disparar serviços só pela estrutura** (estarem todos posicionados). | 🔴 **é a especificação**. Bloqueada pelo detetor de ressalto (4/12). | `m1_tempo_util.py` |
+| S10 | **Duplo ressalto** — o serviço é a **única** jogada em que a bola ressalta **obrigatoriamente dos dois lados** da rede (o servidor deixa-a cair; e tem de ressaltar no quadrado antes de o recetor lhe bater). **Corolário:** os dois ressaltos estão em lados opostos ⇒ **um está SEMPRE em cima** (o lado que a câmara vê). O de baixo pode estar **tapado pelo jogador** — não invalida. | 📋 por implementar | — |
+| S11 | **Mudança de servidor** — 2 pontos válidos seguidos do mesmo lado ⇒ mudou o jogo ⇒ serve o outro par. | ⚠️ **pista fraca**: no **tie-break** o serviço roda a cada 2 pontos e isto não vale. | — |
+
+> ⚖️ **LEI DE DESENHO (12 jul):** **nenhuma regra do jogo pode VETAR um candidato** — há sempre uma
+> exceção legítima (ponto de ouro, tie-break, let). Todas **pontuam**; nenhuma corta. Escolhe-se a
+> **sequência** globalmente mais consistente. Um falso paga caro em vários sítios; uma exceção paga num só, e passa.
 
 ### S3 — porque funciona sem ver os de baixo
 
