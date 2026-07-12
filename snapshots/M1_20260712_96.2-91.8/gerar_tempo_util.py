@@ -22,10 +22,10 @@ import numpy as np
 
 FPS = 29.97
 N_FRAMES = 8741
-BOLA = "../dados_parada4/traj_frames_Parada4_thr04.csv"
+BOLA = "dados/traj_frames_Parada4_thr04.csv"
 CAL  = "calibracao_campo.json"
-VIDEO = "../Parada4.mp4"
-BOXES = "../dados_parada4/player_boxes_parada4.pkl"
+VIDEO = "../../../Parada4.mp4"
+BOXES = "dados/player_boxes_parada4.pkl"
 
 # ground-truth: 13 rallies / 119,6 s, anotados à mão pelo Vasco
 # ⚠️ 13 jul: o Vasco ACRESCENTOU o 13.º (289,1s -> fim do vídeo). Faltava. O que eu chamava
