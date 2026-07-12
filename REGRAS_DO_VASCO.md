@@ -1,5 +1,30 @@
 # As regras do Vasco — inventário completo
 
+> # 🔴 LÊ ISTO ANTES DE PROCURAR: **"RESSALTO" = "QUIQUE" = "BOLA NO CHÃO"**
+> **São TRÊS NOMES PARA A MESMA COISA.** Se procurares só por um deles, **encontras a metade errada.**
+>
+> | procuras por... | encontras... | e concluis (ERRADO) |
+> |---|---|---|
+> | **"ressalto"** | a **S9** e a **S14** — as duas **⛔ BLOQUEADAS** | *"o ressalto não funciona"* |
+> | **"quique"** | a **S23** — ✅ **A CORRER, 13/13, no pipeline** | a verdade |
+>
+> ## ✅ **O DETETOR DE RESSALTO EXISTE, FUNCIONA, E ESTÁ NO PIPELINE.**
+> - a função: **`ressaltos()`** em **`gerar_tempo_util.py`** *(o `ressalto.py` importa-a — **uma só definição**)*
+> - a regra: **`quique_do_servico()`** — a **S23**
+> - o interruptor: **`REGRAS["S23_QUIQUE_SERV"]`**
+> - o que ele acerta: **13/13 quiques do serviço** · e sozinho gera **candidatos a serviço com 100% de recall** (`m3_candidatos.py`)
+>
+> ### 🔑 O QUE MUDOU: **NÃO SE AFINOU O DETETOR. MUDOU-SE A PERGUNTA.**
+> - ❌ **S9 / S14** perguntam *"há um (ou dois) quiques?"* — **em qualquer sítio, a qualquer hora**.
+>   Aí o **CHÃO**, a **PAREDE** e a **RAQUETE** confundem-se ⇒ **49 falsos**. **Continuam bloqueadas.**
+> - ✅ **S23** pergunta *"há um quique **FUNDO**, na **LINHA DE SERVIÇO**, nos **3 s ANTES** da 1.ª
+>   travessia?"* — **um sítio, um instante, um ritual** ⇒ **13/13, zero falsos.**
+>
+> > **FAIXA FINA = OBSERVÁVEL. ÁREA GRANDE = AMBÍGUA.**
+> > O quique do **serviço** é limpo: bola largada da mão, **devagar**, **destapada**, sempre **no mesmo
+> > sítio** e **no mesmo momento**. O quique a **meio do rally** é indistinguível da parede e da raquete.
+> > **O ressalto nunca esteve estragado. Estávamos a apontá-lo para o sítio errado.**
+
 Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 **As melhores ideias do projeto vieram daqui.** Não perder nenhuma.
 
@@ -106,20 +131,21 @@ aprender as cores — e agora é **encontrável**.
 | # | Regra | Estado | Onde |
 |---|---|---|---|
 | S1 | **Zona de serviço aprendida dos dados** — bola no chão junto a um jogador atrás da linha → 10/12 serviços reais. Bom gerador de candidatos. | ✅ implementada | `detetar_servicos()` |
-| S2 | **Formação de serviço** — parceiro na rede + adversário cruzado atrás. **0 falsos.** | ⚠️ correta mas **cega**: exige ver os 4 jogadores, e a câmara não vê os de baixo. Substituída por S3. | `formacao_servico()` |
-| S3 | **Formação lida SÓ nos 2 de cima** ← **a decisão de hoje** | ✅ implementada (12 jul) | `formacao_de_cima()` |
+| S2 | **Formação de serviço** — parceiro na rede + adversário cruzado atrás. **0 falsos.** | 🟢 **REABERTA (13 jul) — NUNCA ESTEVE BLOQUEADA.** Eu dei-a como *"cega"* citando **"só 21,8% dos frames têm os 4"**. 🚨 **O 21,8% era um ARTEFACTO DO `max_det=4`, não da câmara** (sem cap + regras J: **38,8%**). E o **erro maior era a ESTATÍSTICA**: a regra não precisa dos 4 em **todos** os frames — precisa deles **nos 13 momentos do serviço**, que é **o frame mais limpo do jogo** (separados, parados, em formação). **O M1 dá 13/13 ⇒ sabemos onde olhar.** ⚠️ **MEDIR ANTES DE CITAR.** | `formacao_servico()` — **NÃO CORRE** |
+| S3 | **Formação lida SÓ nos 2 de cima** | ⚠️ implementada (12 jul) **mas NÃO CORRE** — vive em `padelpro/modules/servico.py` e nunca foi ligada ao pipeline. *(Foi inventada para substituir a S2, que afinal não estava morta.)* | `formacao_de_cima()` |
+| **S30** | **INATIVIDADE DOS JOGADORES confirma o FIM** — *"4 jogadores visíveis e ~3 s parados → confirma o fim sem esperar. **Se não vires todos, NÃO adivinhes**."* (v9, regra 5) | 🟢 **REABERTA (13 jul)** — pela mesma razão da S2. Estava ⛔ pelo mesmo número falso. | — |
 | S4 | **Quadrado de serviço cruzado** — a bola do serviço cai na **diagonal**. **0 falsos.** | ⚠️ implementada, mas precisa do ressalto (bola a 46% → subir para 76% com thr=0.4) | — |
 | S5 | **Serviço multi-fator** — nenhum sinal sozinho chega; combinar. | ✅ é a arquitetura atual | — |
 | S6 | **Alternância** — os serviços alternam de lado. **Mas o lado só muda quando o PONTO CONTA**: falta/let repete o mesmo lado ⇒ numa corrida do mesmo lado, o que vale é **o ÚLTIMO**. | 📋 por implementar. ⚠️ **NÃO é lei** — no **ponto de ouro** quem recebe escolhe o lado e pode repetir. | `m1_tempo_util.py` |
 | S7 | **Lado do serviço** distingue **ace** de **falta**. | 📋 por implementar | `SPEC_M1_TEMPO_UTIL.md` |
 | S8 | **Ponto só acaba se a próxima pancada for serviço** | ⛔ **BLOQUEADA pelo M3.** Tentada a sério (13 jul) e **rejeitada**: 98,9 recall mas **47,1 precisão**, 5 segmentos colados. Sem detetor de serviço, as **pancadas do INTERVALO** entram pelo meio e esticam cada ponto até ao seguinte. **A regra é boa — o que falta é o serviço.** Não voltar a tentar sem M3. *(Estava marcada "✅ nas regras v9" e NUNCA correu.)* | — |
-| **S9** | 🔴 **A SEQUÊNCIA DO SERVIÇO** (12 jul) — `SAI DA MÃO → CHÃO → RAQUETE → RESSALTO DENTRO DO QUADRADO CRUZADO → pancada seguinte segue o ponto`. **Sem ressalto no quadrado cruzado NÃO HÁ SERVIÇO** (condição necessária, não pontuação). E: **não disparar serviços só pela estrutura** (estarem todos posicionados). | 🔴 **é a especificação**. Bloqueada pelo detetor de ressalto (4/12). | `m1_tempo_util.py` |
+| **S9** | 🔴 **A SEQUÊNCIA DO SERVIÇO** (12 jul) — `SAI DA MÃO → CHÃO → RAQUETE → RESSALTO DENTRO DO QUADRADO CRUZADO → pancada seguinte segue o ponto`. **Sem ressalto no quadrado cruzado NÃO HÁ SERVIÇO** (condição necessária, não pontuação). E: **não disparar serviços só pela estrutura** (estarem todos posicionados). | 🔴 **é a especificação.** ⚠️ **JÁ NÃO ESTÁ TODA BLOQUEADA:** a parte `MÃO → CHÃO` **funciona e está no pipeline** — é a **S23** *(o "chão" é o **QUIQUE**; ver o aviso no topo: **ressalto = quique**)*. Falta só o **quadrado CRUZADO** (a S4). **13/13 nos serviços.** | **`gerar_tempo_util.quique_do_servico()`** (S23) |
 | S10 | **Duplo ressalto** — o serviço é a **única** jogada em que a bola ressalta **obrigatoriamente dos dois lados** da rede (o servidor deixa-a cair; e tem de ressaltar no quadrado antes de o recetor lhe bater). **Corolário:** os dois ressaltos estão em lados opostos ⇒ **um está SEMPRE em cima** (o lado que a câmara vê). O de baixo pode estar **tapado pelo jogador** — não invalida. | 📋 por implementar | — |
 | S11 | **Mudança de servidor** — 2 pontos válidos seguidos do mesmo lado ⇒ mudou o jogo ⇒ serve o outro par. | ⚠️ **pista fraca**: no **tie-break** o serviço roda a cada 2 pontos e isto não vale. | — |
 
 | **S12** | **FIM DO PONTO — 4 s depois da última PANCADA.** Se não se detetar pancada nenhuma, corta com **2-3 s** de margem. *(Substitui os dois erros anteriores: cortar quando a bola deixa de cruzar = **cedo demais**; esticar enquanto a bola andar = **tarde demais** — "a bola pode andar e já ter batido duas vezes".)* | ✅ implementada (v7/v8) | `m1_tempo_util.py` |
 | **S13** | ⏱️ **A TIMELINE NUNCA ANDA PARA TRÁS.** Um segmento nunca se sobrepõe ao anterior nem repõe um frame já usado. **Se dois segmentos se tocam, são O MESMO PONTO** — fundem-se. | ✅ implementada (v8). Corrigiu **6 saltos para trás** e arrumou 21 segmentos em **15 pontos** (os reais são 12). | `m1_tempo_util.py` |
-| S14 | **Fim verdadeiro do ponto** = a bola bate **DUAS VEZES no chão sem ninguém lhe tocar**. | 📋 a regra certa, **bloqueada** pelo detetor de ressalto (7/12). O S12 é a aproximação enquanto isso. | — |
+| S14 | **Fim verdadeiro do ponto** = a bola bate **DUAS VEZES no chão sem ninguém lhe tocar**. | ⛔ **CONTINUA BLOQUEADA** — e agora sabemos **porquê**: a meio do rally o **CHÃO**, a **PAREDE** e a **RAQUETE** confundem-se (**49 falsos a meio de pontos**). ⚠️ **NÃO é o detetor que falha** — o mesmo detetor acerta **13/13 no SERVIÇO** (S23). **É a PERGUNTA:** *"há dois quiques?"* em **área grande** é ambíguo; *"há um quique fundo na linha de serviço?"* em **faixa fina** é observável. A S12 é a aproximação. | — |
 
 | **S15** | 🔴 **MÃO vs RAQUETE** — *"NÃO DISPARAR SERVIÇOS. Só disparar se a bola vier da mão para o chão para a raquete."* A bola da **mão é LENTA**; a da **raquete é RÁPIDA**. Medido no `L` do BlurBall: **serviços L=17,4 · falsos (passagens à mão) L=2,7**. | ✅ implementada. **+18 pontos de PRECISÃO** (65,8% → 83,9%). Mata 24 dos 27 falsos. | `m1_tempo_util.py` |
 | **S16** | ⚖️ **DÚVIDA = MAIS MARGEM; CERTEZA = CORTE RENTE.** Se há pancada detetada → sei que acabou → corto a **2 s**. Se NÃO há pancada → estou na dúvida → dou **5 s**. *(Eu tinha implementado ao CONTRÁRIO — 4 s quando sabia, 2 s quando duvidava. Cortava os pontos 12/13/14 a meio.)* **Os 5 s são para DECIDIR, não para MOSTRAR.** | ✅ implementada. **+9 pontos de precisão** (83,9% → 92,9%). | `m1_tempo_util.py` |
