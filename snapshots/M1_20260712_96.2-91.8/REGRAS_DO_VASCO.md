@@ -3,7 +3,7 @@
 Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 **As melhores ideias do projeto vieram daqui.** Não perder nenhuma.
 
-Última atualização: 12 jul 2026.
+Última atualização: 13 jul 2026.
 
 ---
 
@@ -39,7 +39,7 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | J6 | **Cor da roupa** — se uma camisola apareceu demasiadas vezes, só pode voltar a ser essa. Assinatura por **torso + calções + pernas + ténis**. Identidade **sem depender dos pés**. | ✅ implementada (a testar) | `assinatura()` no script |
 | J7 | **Permissão para os de baixo** — a câmara não vê o fundo perto. Se a box toca a borda de baixo, **aceita-se sem testar pés nem laterais**. Não sabemos *onde* está; sabemos que está **em baixo**, e chega. | ✅ implementada (12 jul) | `Campo.dentro_do_campo()` |
 | J8 | **Pés cortados ⇒ fundo perto ⇒ DEFESA** — a informação não se perde, **muda de forma**. | ✅ implementada | `Campo.zona()` |
-| J9 | **Cor reiniciada por ponto** — aprender as cores no **início de cada ponto** (jogadores separados, parados, em formação = o frame mais limpo do jogo). | ⛔ **bloqueada**: precisa de saber onde começam os pontos, que é o que o M1 tenta descobrir. **Dependência circular.** Fazer em 2.ª passagem. | — |
+| **J9** | **Cor reiniciada por ponto** — aprender as cores no **início de cada ponto** (jogadores separados, parados, em formação = **o frame mais limpo do jogo**). | 🟢 **DESBLOQUEADA (13 jul)!** Estava ⛔ por **dependência circular** (precisava de saber onde começam os pontos). **JÁ NÃO É CIRCULAR: o M1 dá 13/13 serviços.** Sabemos onde cada ponto começa, **treze vezes**. **PRONTA A IMPLEMENTAR.** | — |
 
 ---
 
@@ -123,6 +123,7 @@ aprender as cores — e agora é **encontrável**.
 
 | **S15** | 🔴 **MÃO vs RAQUETE** — *"NÃO DISPARAR SERVIÇOS. Só disparar se a bola vier da mão para o chão para a raquete."* A bola da **mão é LENTA**; a da **raquete é RÁPIDA**. Medido no `L` do BlurBall: **serviços L=17,4 · falsos (passagens à mão) L=2,7**. | ✅ implementada. **+18 pontos de PRECISÃO** (65,8% → 83,9%). Mata 24 dos 27 falsos. | `m1_tempo_util.py` |
 | **S16** | ⚖️ **DÚVIDA = MAIS MARGEM; CERTEZA = CORTE RENTE.** Se há pancada detetada → sei que acabou → corto a **2 s**. Se NÃO há pancada → estou na dúvida → dou **5 s**. *(Eu tinha implementado ao CONTRÁRIO — 4 s quando sabia, 2 s quando duvidava. Cortava os pontos 12/13/14 a meio.)* **Os 5 s são para DECIDIR, não para MOSTRAR.** | ✅ implementada. **+9 pontos de precisão** (83,9% → 92,9%). | `m1_tempo_util.py` |
+| **S20** | ⏸️ **A PAUSA ENTRE PONTOS — 5 a 15 s.** *(estava nos prompts v7.1/v7.7/v8 e **NUNCA foi implementada** — ver `REGRAS_PERDIDAS_dos_prompts.md`)*. Uma pausa **curta demais é IMPOSSÍVEL**: entre pontos os jogadores têm de **ir buscar a bola** e **posicionar-se**. Se o pipeline produz uma pausa de **2,6 s**, a **CAUDA** do segmento anterior está esticada — **e não é preciso saber PORQUÊ para a aparar.** <br>🧠 **APRENDIDA POR DUPLA** *(Vasco, 13 jul: "tem uma **média associada a cada jogador**, que podes ir notando ao longo do vídeo")*: **2 passagens** — a 1.ª observa as pausas do **próprio vídeo**; a 2.ª usa `mediana − 2,5×MAD`. **Zero números meus.** <br>🔒 **Chão de segurança: 4 s** (Vasco). ⚠️ **SÓ APARA A CAUDA — nunca toca no INÍCIO do seguinte** ⇒ **estruturalmente incapaz de perder um serviço** (recall intacto até aos 6 s, medido). | ✅ **implementada (13 jul).** **+1,8 precisão** (93,9 → 95,7). **RESOLVEU A CAUDA DO PONTO 1** (3,5 s → 1,2 s) — que **nenhuma outra regra apanhava**: a raquetada que a esticava era do **INTERVALO**, com um jogador ao pé, **indistinguível de jogo**. Só o M3 a mataria. **Esta mata-a de graça, sem saber o que lá está.** | `gerar_tempo_util.pausa_aprendida()` |
 | **S17** | 🔒🔒 **FECHADA — "a regra da rede está perfeita! fixa e não deixes mudar."** (Vasco, 13 jul) **`RED_DTHETA` / `RED_L_PARA` / `RED_DIST` NÃO SE MEXEM.**<br>**BOLA NA REDE → fim certo, corte a 0,5 s.** ⛔ **A POSIÇÃO NÃO SERVE** — nesta câmara a bola que passa POR CIMA e a que BATE ocupam **os mesmos píxeis** (banda da rede = 35 px; meio-campo do fundo = 100 px). 60 de 94 candidatos caíam **a meio de pontos reais**. ✅ **O que serve (Vasco, 13 jul):** *"se a bola **muda de direção** (ou **pára**) na rede, **longe de uma bounding box** → o ponto acabou."* A bola que passa **não vira**. A que bate, **vira ou morre**. E se não há jogador ao pé, **não foi ninguém: foi a rede.** | ✅ **implementada (13 jul)**. 0 eventos a meio de pontos · 4 no fim (pts 2,3,5,10). **+4,1 precisão.** | `gerar_tempo_util.fim_certo()` |
 | **S18** | 🔴 **MÃO/CORPO NA BOLA → fim certo, corte a 0,5 s.** *(Vasco, 13 jul: **"bola PARADA dentro da bounding box, SEM MUDAR DE CAMPO → ponto terminado de certeza, sem raquetada."**)* **As três condições são precisas as três:** **parada** (`L≤3`) · **dentro da box** (é a mão/corpo de alguém) · **sem mudar de campo** (se atravessou a rede, foi **batida**). ⛔ A bola lenta sozinha dá **49 falsos a meio de pontos** — o lob também vai lento no ponto alto. 🔒 **A DURAÇÃO (0,5 s) NÃO SE BAIXA:** a 0,3 s corta pontos a meio e o recall cai de 96,2 para **82**. **É a duração que separa a MÃO do LOB** (o lob vai lento — mas um *instante*). E: **jogadores a passar a bola com a mão ⇒ o ponto JÁ acabou e ainda NÃO começou.** | ✅ **implementada (13 jul)**. **0 eventos a meio de pontos.** | `gerar_tempo_util.fim_certo()` |
 
@@ -160,6 +161,24 @@ Logo, olhando **só para os 2 de cima**:
 A formação de uma dupla **deduz** a da outra. Não é preciso ver os de baixo — e os de cima são precisamente os que o detetor vê quase sempre.
 
 ---
+
+---
+
+## 🔴 DOS PROMPTS ORIGINAIS (v1/v3) — REGRAS QUE NUNCA CHEGARAM A LADO NENHUM
+*(13 jul: o Vasco — "todas as regras que me fui lembrando passaram pelos prompts". Eu tinha
+auditado o RESUMO, não os ORIGINAIS. Um resumo também perde regras.)*
+Ver `REGRAS_PERDIDAS_v2_dos_originais.md`. **Faltam ainda ~10 ficheiros por ler.**
+
+| # | Regra | Estado | Onde |
+|---|---|---|---|
+| **J10** | 👕 **A CAMISOLA MUDA UMA DE CADA VEZ.** *"A camisola de um jogador pode mudar durante a pausa, **mas não de todos em simultâneo** — atualiza **só o jogador que mudou**."* (v1 §6) ⭐ **É A SALVAGUARDA QUE FALTA À REGRA DA COR** (J6+): se a identidade passa a ser a cor, o perigo é a cor **saltar de pessoa para pessoa** quando o detetor se engana. Esta regra fecha a porta: **as 4 assinaturas NÃO mudam todas ao mesmo tempo.** Se o código acha que mudaram todas, **o CÓDIGO é que está errado.** | 🔴 **por implementar — JUNTO com a J6+. Uma sem a outra é perigosa.** | — |
+| **J11** | ↔️ **O LADO NÃO MUDA DENTRO DO RALLY.** *"O lado dos jogadores **não muda** ao longo do rally — só muda em **trocas de campo** (pausa longa)."* (v3) **Um invariante forte, nunca usado.** Dentro de um ponto, quem está em cima **fica** em cima ⇒ resolve ambiguidades de identidade **de graça**. Combina com a J6+ (cor) e a J4 (2 por lado). | 🔴 por implementar | — |
+| **D1** | 🤔 **EM DÚVIDA, MANTÉM O ESTADO ANTERIOR** *(lei de desenho)*. *"A fase só muda quando a mudança é **visualmente clara** — em dúvida, **mantém a fase anterior**."* (v1 §3, v3 P4) **Histerese: o estado tem INÉRCIA.** Mesma família da S16 (dúvida = mais margem), mas aplicada às **fases**. ⚠️ É o **antídoto para o jitter** — o inimigo nº 1 do M2. | 🔴 por implementar | — |
+| **D2** | 🚫 **NÃO INVENTAR. SE NÃO ANCORA, OMITE.** *(lei de desenho)*. *"**Nunca** inventas timestamps por estimativa — se não consegues ancorar num **evento visual claro**, **omite o evento**."* (v1, v3) **O Vasco escreveu isto há um MÊS.** É a mesma lei que impôs hoje — *"NÃO INVENTAR NEM ATALHAR"* — e que me apanhou **três vezes num só dia**. **Não é um detalhe do prompt: é a LEI DO PROJETO, e já estava escrita.** | ✅ **é a lei que rege tudo** | — |
+| **M2-1** | 🚦 **DEFESA → ATAQUE sem passar por TRANSIÇÃO é PROIBIDO.** *Exceção: se foi rápido demais para captar, aceita o salto.* (v1 §3, v3 P4) | 🔴 por implementar (M2) | — |
+| **M2-2** | 📉 **`confianca` 0.0–1.0 em cada entrada; < 0,6 quando há dúvida.** (v3 P4) Disciplina de **incerteza explícita**. | 🔴 por implementar | — |
+| **M2-3** | ⏱️ **Rallies < 5 s: omite as FASES, mas NUNCA o RALLY.** *"Não omites rallies curtos."* (v3 P10) Bate certo com a diretriz: **nunca perder um ponto**. | 🔴 por implementar | — |
+| **C6** | 📷 **A câmara é FIXA, lateral, a meia altura.** (v3, Geometria) **É o PRESSUPOSTO de todo o sistema.** O 2.º vídeo vai testá-lo. | 📋 registar | — |
 
 ## CAMPO / GEOMETRIA
 

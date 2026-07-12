@@ -21,7 +21,14 @@ def extrair_boxes(obj, n_frames=None):
     """Aceita os feitios em que o JSON do padel_analytics pode vir. Não adivinha: falha alto."""
     # feitio A: já é uma lista por frame
     if isinstance(obj, list):
-        return [[tuple(map(float, b[:4])) for b in (f or [])] for f in obj]
+        def _box(b):
+            # cada deteção pode ser uma lista [x1,y1,x2,y2,...] OU um dict do
+            # PlayerTracker.serialize(): {"id":.., "xyxy":[...], "confidence":..}
+            if isinstance(b, dict):
+                v = b.get("xyxy", b.get("bbox", b.get("box", b.get("xyah"))))
+                return tuple(map(float, v[:4]))
+            return tuple(map(float, b[:4]))
+        return [[_box(b) for b in (f or [])] for f in obj]
 
     if isinstance(obj, dict):
         # feitio B: {"0": [...], "1": [...]}  ou  {"frames": {...}}
