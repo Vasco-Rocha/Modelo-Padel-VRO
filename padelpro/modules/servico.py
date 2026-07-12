@@ -79,33 +79,238 @@ def limpar(ball_xy, vmax=80.0):
 # ===========================================================================
 
 class Campo:
+    """Geometria do campo, DESENHADA A MAO no `calibrar_campo.html`.
+
+    Nao e auto-detetada: a auto-detecao das linhas brancas falhou (marcou a linha
+    de servico LONGE ~40 px abaixo da real, no meio do azul) porque o meio-campo
+    longe ocupa ~65 px contra ~400 do perto -- a perspetiva esmaga-o e nao ha
+    resolucao para o detetor. Ver HANDOFF / memoria `project_calibracao`.
+
+    Novo campo = nova calibracao no `calibrar_campo.html`.
+    """
+
     def __init__(self, cal: dict):
-        self.perto = np.array(cal["servico_perto_coef"])   # linha de serviço PERTO (curva)
-        self.longe = np.array(cal["servico_longe_coef"])   # linha de serviço LONGE (curva)
-        self.rede = np.array(cal["rede_tape_coef"])        # tape da rede
-        self.centro_x = cal["centro_x"]
+        g = lambda k: np.array(cal[k])
+        self.perto = g("servico_perto_coef")     # linha de servico PERTO
+        self.longe = g("servico_longe_coef")     # linha de servico LONGE
+        self.rede = g("rede_tape_coef")          # TOPO da rede (a fita)
+        self.fundo = np.array(cal["fundo_longe_coef"]) if "fundo_longe_coef" in cal else None
+
+        # BASE da rede: e onde estao os PES de quem sobe a' rede. A fita fica ~35 px
+        # acima -- comparar pes com a fita era um erro sistematico silencioso.
+        self.rede_base = np.array(cal.get("rede_base_coef", cal["rede_tape_coef"]))
+
+        # Juncao malha 2/3 = fronteira ATAQUE / TRANSICAO (M2). Nao e linha branca:
+        # e a juncao de dois paineis de vidro. Tem sempre de ser desenhada.
+        self.juncao_perto = np.array(cal["juncao_perto_coef"]) if "juncao_perto_coef" in cal else None
+        self.juncao_longe = np.array(cal["juncao_longe_coef"]) if "juncao_longe_coef" in cal else None
+
+        # Linha central: x = f(y). NAO e vertical -- em perspetiva o meio da imagem
+        # nao e o meio do campo ao fundo. O antigo `centro_x` constante mentia,
+        # e e' a central que decide o QUADRADO DE SERVICO CRUZADO.
+        self.centro_coef = np.array(cal["centro_coef_em_y"]) if "centro_coef_em_y" in cal else None
+        self.centro_x = cal.get("centro_x", 480)
+
+        # LATERAIS (vidro): saem dos EXTREMOS das linhas horizontais desenhadas -- o ponto
+        # onde cada linha encontra o vidro E' o canto. Regra do Vasco: os pes de um jogador
+        # NUNCA passam para la' do vidro. Tudo o que tiver os pes fora do campo NAO e' jogador.
+        self.lat_esq, self.lat_dir = self._laterais(cal)
+
+    @staticmethod
+    def _laterais(cal):
+        P = cal.get("pontos", {})
+        esq, dir_ = [], []
+        for k in ("fundo_longe", "servico_longe", "rede_base", "servico_perto"):
+            p = P.get(k)
+            if not p or len(p) < 3:
+                continue
+            p = sorted(p, key=lambda q: q[0])
+            esq.append((p[0][1], p[0][0]))       # (y, x) do extremo esquerdo
+            dir_.append((p[-1][1], p[-1][0]))    # (y, x) do extremo direito
+        if len(esq) < 3:
+            return None, None
+        E, D = np.array(esq), np.array(dir_)
+        return np.polyfit(E[:, 0], E[:, 1], 2), np.polyfit(D[:, 0], D[:, 1], 2)
+
+    def dentro_do_campo(self, box, margem=35, margem_fundo=4) -> bool:
+        """Os PES estao dentro do campo? (regra do Vasco)
+
+        Os pes de um jogador NUNCA passam para la' do vidro. No maximo vao aos
+        espacos laterais -> `margem` lateral generosa (35 px).
+
+        MAS no fundo LONGE a margem tem de ser ~0: la' a perspetiva esmaga tudo e
+        35 px valem ~2,5 m -- deixariam passar meia bancada. Tudo o que tenha os pes
+        ACIMA da linha do vidro de fundo esta' atras do vidro: e' publico.
+
+        No Parada4 a detecao MAIS FREQUENTE do video inteiro era um espectador
+        (pes em x~50, em 32% dos frames).
+        """
+        if self.lat_esq is None:
+            return True
+        xc, y2 = self._pes(box)
+        if y2 < self.y_fundo_longe(xc) - margem_fundo:   # atras do vidro do fundo
+            return False
+        if xc < float(np.polyval(self.lat_esq, y2)) - margem:
+            return False
+        if xc > float(np.polyval(self.lat_dir, y2)) + margem:
+            return False
+        return True
+
+    def y_fundo_longe(self, x):
+        c = getattr(self, "fundo", None)
+        return float(np.polyval(c, x)) if c is not None else 0.0
+
+    def jogadores(self, boxes, margem=35):
+        """Filtra as boxes: so' quem tem os PES dentro do campo e' jogador."""
+        return [b for b in boxes if self.dentro_do_campo(b, margem)]
 
     def y_servico_perto(self, x): return float(np.polyval(self.perto, x))
     def y_servico_longe(self, x): return float(np.polyval(self.longe, x))
     def y_rede(self, x): return float(np.polyval(self.rede, x))
+    def y_rede_base(self, x): return float(np.polyval(self.rede_base, x))
+
+    def x_centro(self, y) -> float:
+        """x da linha central a' altura y. Cai no `centro_x` antigo se nao houver curva."""
+        if self.centro_coef is None:
+            return float(self.centro_x)
+        return float(np.polyval(self.centro_coef, y))
+
+    def _pes(self, box):
+        return (box[0] + box[2]) / 2.0, box[3]
 
     def lado(self, box):
-        """'baixo' (perto da câmara) ou 'cima' (longe), pela base da box."""
-        return "baixo" if box[3] > self.y_rede((box[0] + box[2]) / 2) + 30 else "cima"
+        """'baixo' (perto da camara) ou 'cima' (longe), pela base da box."""
+        xc, y2 = self._pes(box)
+        return "baixo" if y2 > self.y_rede_base(xc) else "cima"
 
     def atras_da_linha(self, box) -> bool:
-        """Pés do jogador para lá da linha de serviço → posição de SERVIDOR."""
-        xc, y2 = (box[0] + box[2]) / 2, box[3]
+        """Pes do jogador para la' da linha de servico -> posicao de SERVIDOR."""
+        xc, y2 = self._pes(box)
         return y2 > self.y_servico_perto(xc) or y2 < self.y_servico_longe(xc)
 
-    def na_rede(self, box, tol=45) -> bool:
-        """Pés perto da rede → posição de PARCEIRO do servidor."""
-        xc, y2 = (box[0] + box[2]) / 2, box[3]
-        return abs(y2 - self.y_rede(xc)) <= tol
+    def meio_campo_px(self, x, lado: str) -> float:
+        """Altura em pixeis do meio-campo (rede -> linha de servico) daquele lado.
+
+        E a REGUA local. A perspetiva esmaga o lado longe: no Parada4 o meio-campo
+        perto tem ~290 px e o longe ~100 px -- os MESMOS 6.95 m. Uma tolerancia fixa
+        em pixeis (o antigo `tol=45`) vale 1.1 m de um lado e 3.1 m do outro.
+        Todas as tolerancias tem de ser FRACOES disto, nunca pixeis absolutos.
+        """
+        if lado == "baixo":
+            return abs(self.y_servico_perto(x) - self.y_rede_base(x))
+        return abs(self.y_rede_base(x) - self.y_servico_longe(x))
+
+    def na_rede(self, box, frac=0.22) -> bool:
+        """Pes perto da BASE da rede -> posicao de PARCEIRO do servidor.
+
+        `frac` e' uma fracao do meio-campo daquele lado (0.22 * 6.95 m ~ 1.5 m),
+        nao pixeis -- ver `meio_campo_px`.
+        """
+        xc, y2 = self._pes(box)
+        tol = frac * self.meio_campo_px(xc, self.lado(box))
+        return abs(y2 - self.y_rede_base(xc)) <= tol
 
     def metade(self, box) -> str:
-        """'esq' ou 'dir' — para a regra do lado do serviço (ace vs falta)."""
-        return "esq" if (box[0] + box[2]) / 2 < self.centro_x else "dir"
+        """'esq' ou 'dir' -- para o quadrado cruzado e o lado do servico (ace vs falta).
+        Usa a central CURVA, a' altura dos pes do jogador."""
+        xc, y2 = self._pes(box)
+        return "esq" if xc < self.x_centro(y2) else "dir"
+
+    def metade_ponto(self, p) -> str:
+        """'esq' ou 'dir' de um ponto (x, y) -- ex.: onde a bola do servico ressaltou."""
+        return "esq" if p[0] < self.x_centro(p[1]) else "dir"
+
+    # ---------------- M2: fases taticas (geometria pura, sem IA) ----------------
+
+    def zona(self, box) -> str:
+        """DEFESA / TRANSICAO / ATAQUE de UM jogador, pelos PES.
+
+        DEFESA    = atras da linha de servico do seu lado.
+        ATAQUE    = a' frente da juncao malha 2/3 (mais perto da rede).
+        TRANSICAO = o resto (estado-residuo).
+        """
+        if self.juncao_perto is None or self.juncao_longe is None:
+            raise ValueError("Faltam as juncoes malha 2/3 na calibracao (M2).")
+        xc, y2 = self._pes(box)
+        if self.lado(box) == "baixo":
+            if y2 > self.y_servico_perto(xc):
+                return "DEFESA"
+            if y2 < float(np.polyval(self.juncao_perto, xc)):
+                return "ATAQUE"
+        else:
+            if y2 < self.y_servico_longe(xc):
+                return "DEFESA"
+            if y2 > float(np.polyval(self.juncao_longe, xc)):
+                return "ATAQUE"
+        return "TRANSICAO"
+
+    @staticmethod
+    def fase_equipa(z1: str, z2: str) -> str:
+        """Fase da DUPLA (regra das duas boxes): so' e' DEFESA/ATAQUE se AMBOS estiverem la'."""
+        if z1 == z2 and z1 in ("DEFESA", "ATAQUE"):
+            return z1
+        return "TRANSICAO"
+
+
+
+def filtrar_espectadores(player_boxes, campo: Campo, margem=35, tol=25, max_frac=0.25):
+    """Limpa as deteccoes de jogadores. Duas regras do Vasco, em cascata:
+
+    1. FORA DO CAMPO -- os pes de um jogador NUNCA passam para la' do vidro.
+       No maximo vao aos espacos laterais -> margem generosa.
+    2. IMOVEL -- uma detecao que aparece na MESMA zona (tol px) em mais de
+       `max_frac` do video nao e' um jogador: os jogadores MOVEM-SE.
+       E' a mesma regra que ja limpava a bola (`filtrar_objetos_imoveis`).
+
+    No Parada4 a detecao MAIS FREQUENTE do video inteiro era um espectador
+    sentado fora do campo (pes em x~50, em 32% dos frames). Isto mata-o.
+
+    Devolve (boxes_limpas, relatorio).
+    """
+    n = len(player_boxes)
+    pes = lambda b: ((b[0] + b[2]) / 2.0, b[3])
+
+    fora = 0
+    passo1 = []
+    for f in player_boxes:
+        keep = []
+        for b in f:
+            if campo.dentro_do_campo(b, margem):
+                keep.append(b)
+            else:
+                fora += 1
+        passo1.append(keep)
+
+    cont = {}
+    for f in passo1:
+        vistos = set()
+        for b in f:
+            x, y = pes(b)
+            cel = (int(x // tol), int(y // tol))
+            if cel not in vistos:
+                cont[cel] = cont.get(cel, 0) + 1
+                vistos.add(cel)
+    mortos = {c for c, k in cont.items() if k > max_frac * n}
+
+    imoveis = 0
+    saida = []
+    for f in passo1:
+        keep = []
+        for b in f:
+            x, y = pes(b)
+            if (int(x // tol), int(y // tol)) in mortos:
+                imoveis += 1
+            else:
+                keep.append(b)
+        saida.append(keep)
+
+    return saida, {
+        "antes": sum(len(f) for f in player_boxes),
+        "descartadas_fora_do_campo": fora,
+        "descartadas_imoveis": imoveis,
+        "celulas_imoveis": sorted(mortos),
+        "depois": sum(len(f) for f in saida),
+    }
 
 
 def _dist_box(p, b):
