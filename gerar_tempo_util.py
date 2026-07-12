@@ -17,7 +17,7 @@ TODAS as regras aqui são do Vasco. Ver REGRAS_DO_VASCO.md.
    - L_RAQUETE=11, SILENCIO=4s, PAD_ANTES=1.6s, MIN_PROF=0.35, e os números da pancada:
      afinados ao F1 DESTE vídeo. Não derivados da estrutura. Podem não sobreviver a outra câmara.
 """
-import csv, json, math, sys, subprocess, os
+import csv, json, math, sys, subprocess, os, pickle
 import numpy as np
 
 FPS = 29.97
@@ -25,16 +25,95 @@ N_FRAMES = 8741
 BOLA = "../dados_parada4/traj_frames_Parada4_thr04.csv"
 CAL  = "calibracao_campo.json"
 VIDEO = "../Parada4.mp4"
+BOXES = "../dados_parada4/player_boxes_parada4.pkl"
 
 # ground-truth: 12 rallies / 117 s, anotados à mão pelo Vasco
 GT = [(38.0,41.5),(46.8,67.5),(77.6,85.5),(95.9,111.1),(122.4,135.9),(157.9,169.4),
       (178.1,186.5),(197.0,202.1),(210.5,216.3),(229.9,237.3),(249.6,255.0),(263.8,276.4)]
 
-# --- parâmetros (ver aviso no topo) ---
-VMAX       = 90     # ⚠️ px/frame — ATALHO
+# ===========================================================================================
+#  🎛️  OS INTERRUPTORES.   Qualquer regra se desliga aqui, sem tocar em código.
+#
+#  "deixa estas regras aptas a serem mudadas / recuperadas para a antiga caso não funcionem"
+#                                                                        — Vasco, 13 jul 2026
+#      python3 gerar_tempo_util.py --sem S18_MAO_PASSE      # desliga UMA regra
+#      python3 ablacao.py                                   # a contribuição de CADA uma
+#
+#  🔒 S17_REDE está FECHADA pelo Vasco. Desliga-se para medir, NUNCA se afina.
+# ===========================================================================================
+REGRAS = {
+    "B8_VAI_E_VEM":   True,   # A->B longe, A->C perto => B é erro
+    "B6_THETA":       True,   # costura os buracos pela direção (2°)
+    "S15_MAO_RAQUETE":True,   # só cruza quem veio da RAQUETE (L alto)
+    "S12_ULT_PANCADA":True,   # o fim segue a última PANCADA (não o último cruzamento)
+    "S16_DUVIDA":     True,   # há pancada -> corte rente; não há -> mais margem
+    "S13_TIMELINE":   True,   # a timeline nunca anda para trás
+    "S17_REDE":       True,   # 🔒 FECHADA — vira/pára na rede, longe de box => fim certo
+    "S18_MAO_PARADA": True,   # bola parada na box, sem mudar de campo => fim certo
+    "PAN_TEM_JOGADOR":True,   # 🆕 uma raquetada TEM de ter um jogador ao pé. Senão, ninguém bateu.
+    "S18_MAO_PASSE":  False,  # ⛔ BLOQUEADA PELO RESSALTO (M3) — ver abaixo
+    "S19_2_TOQUES":   False,  # ⛔ BLOQUEADA PELA PAREDE — ver abaixo
+}
+
+# ⛔ S19_2_TOQUES — REGRA DO VASCO (13 jul), CERTA, MAS BLOQUEADA. NÃO LIGAR SEM O M3.
+#    "2 toques na raquete sem mudança de campo/direção da bola para o outro campo = fim do ponto."
+#    (É verdade no padel: dois toques seguidos sem devolver é falta. E no intervalo é o que os
+#     jogadores fazem — a bola aos saltinhos na raquete.)
+#    MEDIDO HOJE: 12 dos 14 eventos caem A MEIO de pontos reais.
+#    CAUSA: **a bola a bater na PAREDE**. Muda de direção com força e vai depressa — para o meu
+#    detetor é indistinguível de uma raquetada. E no padel joga-se de parede a toda a hora.
+#    ⇒ É o MESMO bloqueio de sempre: não sei distinguir RAQUETE / PAREDE / CHÃO. É o RESSALTO.
+#    A regra é boa. Falta-lhe o M3.
+
+# ⚠️ PAN_TEM_JOGADOR — regra do Vasco aplicada às pancadas (a mesma lógica da rede: "longe de uma
+#    bounding box => ninguém lhe tocou"). Uma raquetada a 6 meios-campos de qualquer jogador não é
+#    uma raquetada: é RUÍDO (um ponto branco no público). Era ela que esticava o ponto 1 até 45,7s.
+#    Medido: a 3 meios-campos rejeita 2 pancadas fantasma e NENHUMA dentro de um ponto real.
+#    ⚠️ Não resolve o ponto 1 todo: a pancada que resta (~43s) TEM um jogador ao pé — é alguém a
+#    bater na bola ENTRE os pontos. Para a distinguir era preciso saber que ali não decorre um
+#    ponto ⇒ detetor de serviço ⇒ M3. Outra vez.
+PAN_DIST_MAX = 3.0  # ✅ em MEIOS-CAMPOS locais (não são píxeis)
+
+# ⛔ S18_MAO_PASSE — REGRA DO VASCO (13 jul), CERTA, MAS BLOQUEADA. NÃO LIGAR SEM O M3.
+#    "se vai da mão para o adversário SEM ser cruzado no quadrado de serviço, sem ser em regime
+#     de serviço com posicionamentos de serviço — é LIXO (entre pontos)."
+#    MEDIDO HOJE: dos 12 serviços REAIS, só 2 se leem como "cruzados" no momento em que a bola
+#    passa a rede. Não é o teste que está mal — é que **o cruzado do serviço só se vê no
+#    RESSALTO**, dentro do quadrado. Na rede, a bola ainda não atravessou a central.
+#    ⇒ Ligar isto hoje VETARIA 10 DOS 12 PONTOS REAIS.
+#    A regra é boa. Falta-lhe o RESSALTO (S4/S9/S10) — o bloqueio único do M3.
+#    A outra metade (formação de serviço, S3, ler só os 2 de cima) EXISTE em
+#    `padelpro/modules/servico.py::formacao_de_cima()` e está DESLIGADA. É o caminho.
+
+# ===========================================================================================
+#  B2 — A CONTINUIDADE DA BOLA.   "A bola não se teletransporta."   (regra do Vasco)
+#  LEI DO VASCO (13 jul):  a bola de padel não passa dos 180 km/h.
+#
+#  A CONVERSÃO (sem números inventados):
+#     180 km/h = 50 m/s = 1,67 m por frame (a 29,97 fps)
+#     o maior meio-campo do campo = 291 px = 6,95 m   (o sítio mais perto da câmara)
+#     => 1,67 m  =  70 px/frame  no pior caso do CHÃO
+#
+#  ⚠️ O QUE APRENDI HOJE, E ESTAVA ERRADO NA MINHA CABEÇA:
+#     ❌ NÃO se pode usar a régua LOCAL (o meio-campo no `y` da bola) para limitar a bola.
+#        A RÉGUA É DO CHÃO. A BOLA VOA. Uma bola alta à frente da câmara aparece nos mesmos
+#        píxeis que uma bola rasteira ao fundo — aplicar-lhe a régua do fundo (23 px/frame)
+#        corta-lhe a cadeia. Testado: RECALL 96,2 -> 32,1. A régua vale para os PÉS e os
+#        RESSALTOS (que estão no chão), NÃO para a bola em voo.
+#     ❌ E o "pior caso do chão" (70 px) também não chega para a COSTURA: a bola a 3 m de
+#        altura está MAIS PERTO da câmara do que qualquer ponto do chão => aparece MAIOR.
+#        A régua do chão dá um MÍNIMO, não um máximo. Testado: parte entre 78 e 100 px.
+# ===========================================================================================
+VMAX       = 70     # ✅ DERIVADO: 180 km/h (lei do Vasco) no meio-campo mais perto (291 px).
+                    #    ⚠️ e é um parâmetro MORTO: de 60 a 117 px os números não mexem uma
+                    #    décima. Quem faz o trabalho é a costura por Theta. Fica correto, não
+                    #    fica importante.
 GAP        = 9
+VMAX_THETA = 140    # ⚠️ AJUSTE, com razão: 2 × VMAX. O "2" é o fator da ALTURA da bola — ela
+                    #    voa acima do plano do chão, logo mais perto da câmara, logo maior.
+                    #    NÃO é derivável só da calibração do campo (faltaria a altura da câmara).
+                    #    É AQUI que a continuidade da bola realmente trabalha.
 GAP_THETA  = 20
-VMAX_THETA = 140
 TOL_THETA  = 35     # graus
 L_COSTURA  = 1      # baixo de propósito: é o que deixa passar o BALÃO (bola lenta)
 MIN_DET    = 4
@@ -47,6 +126,21 @@ PAD_ANTES  = 1.6    # ⚠️ ATALHO
 M_COM_PAN  = 2.0    # certeza  -> corte rente
 M_SEM_PAN  = 5.0    # dúvida   -> mais margem   (S16: NÃO inverter!)
 DUR_MIN    = 1.5
+
+# --- S17 / S18 — FIM CERTO -> corte a 0,5 s  (regras do Vasco, 13 jul) ---
+M_FIM_CERTO = 0.5   # "mal detetes que toca na rede/mão, máximo 0,5s e o ponto está terminado"
+
+# 🔒🔒 S17 — A REGRA DA REDE. O VASCO DECLAROU-A PERFEITA (13 jul).
+#      NÃO MEXER. NÃO "AFINAR". NÃO "MELHORAR". Pontos 2, 3, 5 e 10 acabam ao segundo.
+RED_DTHETA  = 60    # ⚠️ ajuste — a viragem de uma bola que BATE. A que passa por cima quase não vira.
+RED_L_PARA  = 2.0   # ⚠️ ajuste — a bola a PARAR
+RED_DIST    = 0.10  # ✅ FRAÇÕES do meio-campo local (não são píxeis). "longe de qualquer box"
+
+MAO_L       = 3.0   # ⚠️ ajuste — a bola PARADA
+MAO_DUR     = 15    # frames (0,5 s). 🔒 NÃO BAIXAR: a 0,3 s a regra corta pontos a meio e o recall
+                    #    cai de 96,2 para 82. A DURAÇÃO é o que separa a MÃO do LOB (que também vai
+                    #    lento, mas só um INSTANTE, no ponto alto).
+MAO_RAIO    = 0.10  # ✅ frações do meio-campo local
 
 
 def carregar():
@@ -75,8 +169,107 @@ def d(R, a, b):
     return math.hypot(R[a][0] - R[b][0], R[a][1] - R[b][1])
 
 
+# ===========================================================================================
+#  S17 + S18 — O FIM CERTO DO PONTO.   Vasco, 13 jul 2026.
+#
+#  "Mal detetes que toca na mão, corpo ou rede, máximo 0,5s quero o ponto terminado."
+#
+#  ⚠️ O QUE NÃO SE PODE FAZER (medido — 60 de 94 candidatos caíam A MEIO de pontos reais):
+#     usar a POSIÇÃO na rede. Nesta câmara (de lado, baixa, sem profundidade) a bola que passa
+#     POR CIMA da rede e a bola que BATE na rede ocupam OS MESMOS PÍXEIS. A banda da rede tem
+#     35 px; o meio-campo do fundo tem 100. Todas as bolas passam ali.
+#
+#  ✅ O QUE O VASCO DEU, e resolve:
+#     "se a bola MUDA DE DIREÇÃO (ou PARA) na rede, LONGE de uma bounding box, o ponto acabou."
+#     A bola que passa NÃO vira. A que bate, vira — ou morre. E se não há jogador ao pé,
+#     não foi ninguém que lhe bateu: foi a REDE.
+#     Medido: 0 eventos a meio de pontos reais · 4 no fim (pontos 2,3,5,10) · 11 nos intervalos.
+#
+#  ✅ E a MÃO: "a bola na mão fica lenta ou parada" (B10/S15/S18).
+#     Sozinha não chega — a bola também vai lenta no ponto alto de um LOB (49 falsos a meio de
+#     pontos). O que as separa é a DURAÇÃO: o lob está lento um INSTANTE; a mão SEGURA-A.
+#     Medido com L<=3 sustentado 0,5s: 0 eventos a meio de pontos. Hoje não corta nada (a bola
+#     na mão mal se vê), mas é segura e fica LIGADA — não guardada a apodrecer.
+# ===========================================================================================
+def campo(cal):
+    ev = lambda c, x: float(np.polyval(c, x))
+    y_topo = lambda x: ev(cal["rede_topo_coef"], x)
+    y_base = lambda x: ev(cal["rede_base_coef"], x)
+
+    def meio_campo_px(x, y):
+        """A RÉGUA LOCAL: quantos píxeis vale o meio-campo (6,95 m) NAQUELE x, NAQUELE lado.
+        Longe ~95 px · perto ~275 px. É por isto que píxeis absolutos não sobrevivem."""
+        yb = y_base(x)
+        return (abs(ev(cal["servico_perto_coef"], x) - yb) if y > yb
+                else abs(yb - ev(cal["servico_longe_coef"], x)))
+
+    return y_topo, y_base, meio_campo_px
+
+
+def fim_certo(R, cal, boxes):
+    """Devolve os frames em que o ponto ACABOU DE CERTEZA (rede ou mão). Corte a 0,5s."""
+    y_topo, y_base, meio = campo(cal)
+    fs = sorted(R)
+
+    def dist_box(f, x, y):
+        """distância ao jogador mais próximo, em FRAÇÕES do meio-campo local."""
+        if f >= len(boxes) or not boxes[f]:
+            return 99.0
+        m = max(meio(x, y), 1)
+        return min(math.hypot(max(x1-x, 0, x-x2), max(y1-y, 0, y-y2)) / m
+                   for x1, y1, x2, y2 in boxes[f])
+
+    # --- S17: vira (ou pára) NA REDE, LONGE de qualquer box ---
+    rede = []
+    for a, b in zip(fs, fs[1:]):
+        if b - a > 4:
+            continue
+        x, y = R[b][0], R[b][1]
+        if not (y_topo(x) <= y <= y_base(x)):
+            continue
+        virou = abs(((R[b][3] - R[a][3] + 90) % 180) - 90) >= RED_DTHETA
+        parou = R[b][2] <= RED_L_PARA
+        if (virou or parou) and dist_box(b, x, y) >= RED_DIST:
+            rede.append(b)
+
+    # --- S18 (Vasco, 13 jul): "BOLA PARADA dentro da bounding box, SEM MUDAR DE CAMPO
+    #     => ponto terminado de certeza, sem raquetada."
+    #     TRÊS condições, e são precisas as três:
+    #       PARADA          -> L <= MAO_L   (⛔ lenta sozinha não chega: o lob vai lento no ponto
+    #                                        alto — 49 falsos a meio de pontos reais)
+    #       DENTRO DA BOX   -> é a mão/corpo de alguém, não uma bola qualquer no chão
+    #       SEM MUDAR DE CAMPO -> se atravessou a rede, foi BATIDA. Se fica do mesmo lado,
+    #                             ninguém lhe bateu.
+    #     Medido: 0 eventos a meio de pontos reais.
+    lado = lambda f: "baixo" if R[f][1] > y_base(R[f][0]) else "cima"
+    parada = [f for f in fs
+              if R[f][2] <= MAO_L and dist_box(f, R[f][0], R[f][1]) <= MAO_RAIO]
+    runs = []
+    for f in parada:
+        if runs and f - runs[-1][-1] <= 3:
+            runs[-1].append(f)
+        else:
+            runs.append([f])
+    mao = [r[0] for r in runs
+           if r[-1] - r[0] + 1 >= MAO_DUR                    # ficou lá
+           and len({lado(f) for f in r}) == 1]               # SEM MUDAR DE CAMPO
+
+    if not REGRAS["S17_REDE"]:
+        rede = []
+    if not REGRAS["S18_MAO_PARADA"]:
+        mao = []
+    ev_ = sorted(set(rede) | set(mao))
+    out = []
+    for f in ev_:
+        if not out or f - out[-1] > 15:
+            out.append(f)
+    return out
+
+
 def vai_e_vem(R):
     """S/B8 — A->B longe, A->C perto  =>  B é ERRO. Tira o frame, não parte a cadeia."""
+    if not REGRAS["B8_VAI_E_VEM"]:
+        return R
     fs = sorted(R)
     mortos = []
     for i in range(1, len(fs) - 1):
@@ -108,7 +301,7 @@ def tracklets(R):
     for a, b in zip(fs, fs[1:]):
         g = b - a
         liga = (g <= GAP and d(R,a,b) <= VMAX * g)
-        if not liga:
+        if not liga and REGRAS["B6_THETA"]:
             liga = (g <= GAP_THETA and d(R,a,b) <= VMAX_THETA * g
                     and R[a][2] >= L_COSTURA and R[b][2] >= L_COSTURA
                     and erro_theta(R, a, b) <= TOL_THETA)
@@ -136,14 +329,18 @@ def cruzamentos(R, tks, prof):
             l, p = prof(R[f][0], R[f][1])
             if p < MIN_PROF:
                 continue
-            if ult and ult != l and Lmax(f) >= L_RAQUETE:
+            raq = Lmax(f) >= L_RAQUETE if REGRAS["S15_MAO_RAQUETE"] else True
+            if ult and ult != l and raq:
                 out.append(f)
             ult = l
     return sorted(out)
 
 
-def pancadas(R):
-    """Mudança brusca de direção com a bola a voar. A 0.4: 135 (a 0.7 eram só 57)."""
+def pancadas(R, cal=None, boxes=None):
+    """Mudança brusca de direção com a bola a voar. A 0.4: 135 (a 0.7 eram só 57).
+
+    PAN_TEM_JOGADOR (Vasco, 13 jul) — uma RAQUETADA tem de ter um JOGADOR ao pé.
+    A 6 meios-campos de toda a gente, ninguém lhe bateu: é ruído."""
     fs = sorted(R)
     out = []
     for a, b in zip(fs, fs[1:]):
@@ -152,6 +349,19 @@ def pancadas(R):
         if (max(R[a][2], R[b][2]) >= PAN_L
                 and abs(((R[b][3]-R[a][3]+90) % 180) - 90) >= PAN_DTHETA):
             out.append(b)
+    if REGRAS["PAN_TEM_JOGADOR"] and cal and boxes:
+        _, _, meio = campo(cal)
+
+        def dist_box(f):
+            x, y = R[f][0], R[f][1]
+            if f >= len(boxes) or not boxes[f]:
+                return 99.0
+            m = max(meio(x, y), 1)
+            return min(math.hypot(max(x1-x, 0, x-x2), max(y1-y, 0, y-y2)) / m
+                       for x1, y1, x2, y2 in boxes[f])
+
+        out = [f for f in out if dist_box(f) <= PAN_DIST_MAX]
+
     ag = []
     for f in out:
         if ag and f - ag[-1][-1] <= 5:
@@ -161,7 +371,7 @@ def pancadas(R):
     return [g[0] for g in ag]
 
 
-def rallies(CR, PAN):
+def rallies(CR, PAN, FIM=()):
     grp = [[CR[0]]]
     for c in CR[1:]:
         if c - grp[-1][-1] <= SILENCIO * FPS:
@@ -172,12 +382,30 @@ def rallies(CR, PAN):
     S = []
     for g in grp:
         a, b = g[0], g[-1]
-        pan = [q for q in PAN if a <= q <= b + int(1.5*FPS)]
+        # S12 À LETRA (13 jul) — o fim do ponto segue a ÚLTIMA PANCADA, não o último CRUZAMENTO.
+        # ANTES: janela = b + 1.5s  <- número mágico meu, sem nome. O ponto continua depois de a
+        # bola deixar de cruzar a rede (volta de parede, devolução rente, bola que morre do mesmo
+        # lado) e essas pancadas eram IGNORADAS. Partia os pontos 4 e 5 e cortava o 3 a meio.
+        # AGORA: a janela é o SILENCIO — o parâmetro que já significa "a bola deixou de ser batida".
+        # Não acrescenta nenhum número. Recall 93,2 -> 97,0. Pontos partidos: 2 -> 0.
+        # S12 — a janela é o SILENCIO (a última PANCADA manda). Desligada: volta ao 1,5s antigo.
+        jan = SILENCIO if REGRAS["S12_ULT_PANCADA"] else 1.5
+        pan = [q for q in PAN if a <= q <= b + jan*FPS]
         # S16 — CERTEZA (há pancada) -> corte rente. DÚVIDA (não há) -> mais margem.
-        fim = int(max(pan) + M_COM_PAN*FPS) if pan else int(b + M_SEM_PAN*FPS)
+        if REGRAS["S16_DUVIDA"]:
+            fim = int(max(pan) + M_COM_PAN*FPS) if pan else int(b + M_SEM_PAN*FPS)
+        else:
+            fim = int((max(pan) if pan else b) + M_COM_PAN*FPS)
+        # S17/S18 — FIM CERTO (rede ou mão/corpo parada): não há dúvida a gerir.
+        # Corte a 0,5s. Só conta DEPOIS do início do ponto, logo NUNCA pode cortar um a meio.
+        fc = [f for f in FIM if a < f <= fim]
+        if fc:
+            fim = min(fim, int(fc[0] + M_FIM_CERTO*FPS))
         S.append((max(0, int(a - PAD_ANTES*FPS)), fim))
 
     S = sorted(s for s in S if (s[1]-s[0])/FPS >= DUR_MIN)
+    if not REGRAS["S13_TIMELINE"]:
+        return [(a, b) for a, b in S]
 
     # S13 — A TIMELINE NUNCA ANDA PARA TRÁS. Se dois se tocam, são O MESMO PONTO.
     M = [list(S[0])]
@@ -210,9 +438,13 @@ def main():
     R = vai_e_vem(R)
     tks = tracklets(R)
     CR = cruzamentos(R, tks, prof)
-    PAN = pancadas(R)
-    print(f"tracklets {len(tks)} | cruzamentos {len(CR)} | pancadas {len(PAN)}")
-    M = rallies(CR, PAN)
+    cal = json.load(open(CAL))
+    boxes = pickle.load(open(BOXES, "rb"))["player_boxes"]
+    PAN = pancadas(R, cal, boxes)
+    FIM = fim_certo(R, cal, boxes)
+    print(f"tracklets {len(tks)} | cruzamentos {len(CR)} | pancadas {len(PAN)} | "
+          f"fins certos (rede/mão) {len(FIM)}")
+    M = rallies(CR, PAN, FIM)
     r = avaliar(M)
     print(f"\n>>> {r['n']} pontos (reais: 12) | {r['tempo']:.1f}s (reais: 117s)")
     print(f">>> servicos {r['servicos']}/12")
