@@ -630,3 +630,84 @@ def formacao_de_cima(boxes, campo: Campo, tol_rede=0.25):
     if atras == 1 and na_rede == 1:
         return "servico_de_cima"                         # eles servem
     return None                                          # ambiguo (a meio do ponto)
+
+def estado_de_baixo(boxes, campo: Campo):
+    """O que os jogadores de BAIXO estao a fazer -- INCLUINDO quando nao aparecem.
+
+    REGRA DO VASCO (12 jul): **a ausencia e' informacao, nao e' falha.**
+
+    A camara corta o fundo perto. Mas a REDE de baixo esta' bem DENTRO do frame
+    (y ~ 172-400). Logo:
+
+        aparece na REDE  -> subiu. Esta' a atacar / e' o parceiro do servidor.
+        NAO aparece      -> RECUOU ate' sair do frame -> esta' no fundo -> DEFESA.
+
+    Nao e' "nao sabemos". E' "sabemos que estao la' atras".
+    Um jogador que desaparece esta' a recuar; um que aparece na rede esta' a subir.
+    As duas coisas nunca acontecem ao mesmo tempo na mesma dupla.
+
+    Devolve: "AMBOS_RECUADOS" | "UM_NA_REDE" | "AMBOS_A_FRENTE" | "MISTO"
+    """
+    baixo = [b for b in boxes if campo.lado(b) == "baixo"]
+    if not baixo:
+        return "AMBOS_RECUADOS"                      # <- a AUSENCIA a falar
+
+    na_rede = sum(1 for b in baixo if campo.na_rede(b))
+    visiveis_atras = sum(1 for b in baixo if not campo.na_rede(b))
+
+    if na_rede >= 2:
+        return "AMBOS_A_FRENTE"
+    if na_rede == 1 and visiveis_atras == 0:
+        return "UM_NA_REDE"                          # o outro recuou (invisivel) = defesa
+    if na_rede == 1:
+        return "UM_NA_REDE"
+    return "MISTO"
+
+
+def quem_serve(boxes, campo: Campo):
+    """QUEM esta a servir -- lendo os DOIS lados, com a ausencia a contar como sinal.
+
+    No servico as duas duplas estao em configuracoes INCOMPATIVEIS:
+        dupla que SERVE  : servidor atras + PARCEIRO NA REDE
+        dupla que RECEBE : os DOIS atras (em defesa)
+
+    Duas leituras INDEPENDENTES, que se confirmam uma a' outra:
+
+      de CIMA (visivel quase sempre):
+          2 atras            -> eles RECEBEM  -> servico de BAIXO
+          1 na rede + 1 atras-> eles SERVEM   -> servico de CIMA
+
+      de BAIXO (a ausencia fala):
+          AMBOS_RECUADOS     -> eles RECEBEM  -> servico de CIMA
+          UM_NA_REDE         -> eles SERVEM   -> servico de BAIXO
+
+    Devolve (lado, confianca):
+        lado      : "baixo" | "cima" | None
+        confianca : "alta"  (os dois lados concordam)
+                    "media" (so' um lado deu leitura)
+                    None    (contradicao -> nao decide; a diretriz manda nao inventar)
+    """
+    de_cima = formacao_de_cima(boxes, campo)          # "servico_de_baixo"/"servico_de_cima"/None
+    de_baixo = estado_de_baixo(boxes, campo)
+
+    voto_cima = None
+    if de_cima == "servico_de_baixo":
+        voto_cima = "baixo"
+    elif de_cima == "servico_de_cima":
+        voto_cima = "cima"
+
+    voto_baixo = None
+    if de_baixo == "AMBOS_RECUADOS":
+        voto_baixo = "cima"                            # eles recebem -> servico vem de cima
+    elif de_baixo == "UM_NA_REDE":
+        voto_baixo = "baixo"                           # eles servem
+
+    if voto_cima and voto_baixo:
+        if voto_cima == voto_baixo:
+            return voto_cima, "alta"                   # <- as duas leituras concordam
+        return None, None                              # contradicao: nao inventar
+    if voto_cima:
+        return voto_cima, "media"
+    if voto_baixo:
+        return voto_baixo, "media"
+    return None, None
