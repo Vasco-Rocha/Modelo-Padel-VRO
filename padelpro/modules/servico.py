@@ -232,6 +232,8 @@ class Campo:
         if self.juncao_perto is None or self.juncao_longe is None:
             raise ValueError("Faltam as juncoes malha 2/3 na calibracao (M2).")
         xc, y2 = self._pes(box)
+        if y2 >= 538:            # pes cortados pela borda -> esta' no fundo PERTO
+            return "DEFESA"
         if self.lado(box) == "baixo":
             if y2 > self.y_servico_perto(xc):
                 return "DEFESA"
@@ -310,6 +312,125 @@ def filtrar_espectadores(player_boxes, campo: Campo, margem=35, tol=25, max_frac
         "descartadas_imoveis": imoveis,
         "celulas_imoveis": sorted(mortos),
         "depois": sum(len(f) for f in saida),
+    }
+
+
+
+def dois_por_lado(player_boxes, campo: Campo, confs=None, H=540):
+    """Regra do Vasco: sao SEMPRE 2 contra 2. No maximo 2 jogadores de cada lado da rede.
+
+    Se aparecerem 3 deteccoes de um lado, uma e' lixo -- fica com as 2 melhores.
+    Criterio (por ordem):
+      1. maior CONFIANCA, se vier no JSON;
+      2. senao, a box MAIOR (o publico ao fundo e' pequeno; um jogador nao).
+
+    PORQUE ISTO IMPORTA MAIS DO QUE PARECE
+    --------------------------------------
+    E' uma verdade do JOGO, nao um threshold afinado a' mao. E como limpa o excesso,
+    deixa-nos baixar o `CONF` do detetor a' vontade (0.5 -> 0.15) para recuperar:
+      - os jogadores CORTADOS pela borda de baixo (meia pessoa = confianca baixa)
+      - os do FUNDO longe (poucos pixeis)
+    RECALL pela detecao, PRECISAO pela estrutura. As duas coisas deixam de competir.
+
+    Nota: quem tem os PES cortados pela borda de baixo esta', por construcao, no lado
+    de BAIXO -- nao ha ambiguidade.
+    """
+    saida = []
+    for f, boxes in enumerate(player_boxes):
+        cf = (confs[f] if confs else [None] * len(boxes))
+        cima, baixo = [], []
+        for b, c in zip(boxes, cf):
+            xc, y2 = (b[0] + b[2]) / 2.0, b[3]
+            pes_cortados = y2 >= H - 2
+            lado = "baixo" if (pes_cortados or y2 > campo.y_rede_base(xc)) else "cima"
+            area = (b[2] - b[0]) * (b[3] - b[1])
+            (baixo if lado == "baixo" else cima).append((b, c if c is not None else area))
+        keep = []
+        for grupo in (cima, baixo):
+            grupo.sort(key=lambda t: -t[1])
+            keep += [b for b, _ in grupo[:2]]
+        saida.append(keep)
+    return saida
+
+
+def pes_fora_do_frame(box, H=540) -> bool:
+    """Os pes sairam pela borda de baixo. NAO e' motivo para descartar a detecao --
+    e' informacao: o jogador esta' no fundo PERTO. Ver `Campo.zona`."""
+    return box[3] >= H - 2
+
+
+
+def continuidade_jogadores(frames_id, campo: Campo, fps=30.0, v_max_ms=9.0,
+                           max_buraco_frames=15):
+    """Regra do Vasco: um jogador NAO se teletransporta -- e nao desaparece a meio do ponto.
+
+    A mesma regra que ja limpava a bola (`filtrar_continuidade`), agora nas pessoas.
+    Usa os IDs do ByteTrack, portanto nao tem de adivinhar quem e' quem.
+
+    Faz DUAS coisas (a segunda e' a que interessa):
+      1. REJEITA saltos impossiveis -- se o #3 salta 300 px num frame, aquilo nao e' o #3.
+      2. PREENCHE buracos -- se vi o #3 no frame 100 e no 104, ele ESTEVE algures no meio.
+         Interpola. Um jogador nao desaparece a meio de um ponto.
+         E' a unica regra que ACRESCENTA informacao em vez de a deitar fora.
+
+    A velocidade maxima NAO pode ser em pixeis fixos: 9 m/s valem ~12 px/frame no fundo
+    perto e ~4 px/frame no fundo longe (o meio-campo longe tem 100 px contra 290 do perto,
+    para os mesmos 6.95 m). Converte-se localmente. Terceira vez hoje que a perspetiva
+    obriga a isto -- nada em pixeis absolutos sobrevive.
+
+    Args:
+        frames_id: lista (por frame) de {id: (x1,y1,x2,y2)}  (de `carregar_players_com_id`)
+    Returns:
+        (frames_id_corrigido, relatorio)
+    """
+    n = len(frames_id)
+    out = [dict(d) for d in frames_id]
+
+    def px_por_m(box):
+        xc, y2 = (box[0] + box[2]) / 2.0, box[3]
+        lado = "baixo" if y2 > campo.y_rede_base(xc) else "cima"
+        return max(campo.meio_campo_px(xc, lado) / 6.95, 1.0)
+
+    def pes(b):
+        return ((b[0] + b[2]) / 2.0, b[3])
+
+    ids = set()
+    for d in frames_id:
+        ids |= set(d)
+
+    saltos = preenchidos = 0
+    for pid in ids:
+        vistos = [f for f in range(n) if pid in out[f]]
+        if len(vistos) < 2:
+            continue
+
+        # 1. saltos impossiveis
+        for a, b in zip(vistos, vistos[1:]):
+            pa, pb = pes(out[a][pid]), pes(out[b][pid])
+            dt = (b - a) / fps
+            limite = v_max_ms * px_por_m(out[a][pid]) * dt * 1.5   # 50% de folga
+            if math.hypot(pb[0] - pa[0], pb[1] - pa[1]) > limite:
+                del out[b][pid]
+                saltos += 1
+
+        # 2. preencher buracos curtos
+        vistos = [f for f in range(n) if pid in out[f]]
+        for a, b in zip(vistos, vistos[1:]):
+            gap = b - a - 1
+            if not (0 < gap <= max_buraco_frames):
+                continue
+            ba, bb = out[a][pid], out[b][pid]
+            for k in range(1, gap + 1):
+                t = k / (gap + 1)
+                out[a + k][pid] = tuple(
+                    ba[i] + t * (bb[i] - ba[i]) for i in range(4)
+                )
+                preenchidos += 1
+
+    return out, {
+        "ids": len(ids),
+        "saltos_rejeitados": saltos,
+        "frames_preenchidos": preenchidos,
     }
 
 

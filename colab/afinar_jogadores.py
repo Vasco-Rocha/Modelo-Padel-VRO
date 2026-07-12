@@ -130,14 +130,19 @@ def r2_continuidade(fr, v_max_ms=9.0, max_buraco=15):
     for pid in ids:
         vis = [f for f in range(n) if pid in out[f]]
         if len(vis) < 2: continue
-        for a, b in zip(vis, vis[1:]):
-            ba = out[a][pid][0]
+        # 1. saltos impossiveis -- ancora movel (se rejeitar, a ancora NAO avanca)
+        anc = vis[0]
+        for b in vis[1:]:
+            ba = out[anc][pid][0]
             x, y = pes(ba)
             ppm = max(meio_campo_px(x, lado_de(ba))/6.95, 1.0)
-            lim = v_max_ms * ppm * ((b-a)/FPS) * 1.5
-            pa, pb = pes(out[a][pid][0]), pes(out[b][pid][0])
+            lim = v_max_ms * ppm * ((b-anc)/FPS) * 1.5
+            pa, pb = pes(ba), pes(out[b][pid][0])
             if math.hypot(pb[0]-pa[0], pb[1]-pa[1]) > lim:
                 del out[b][pid]; saltos += 1
+            else:
+                anc = b
+        # 2. preencher buracos
         vis = [f for f in range(n) if pid in out[f]]
         for a, b in zip(vis, vis[1:]):
             gap = b - a - 1
