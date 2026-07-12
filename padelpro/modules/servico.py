@@ -110,6 +110,7 @@ class Campo:
         # e e' a central que decide o QUADRADO DE SERVICO CRUZADO.
         self.centro_coef = np.array(cal["centro_coef_em_y"]) if "centro_coef_em_y" in cal else None
         self.centro_x = cal.get("centro_x", 480)
+        self.H = cal.get("resolucao", [960, 540])[1]
 
         # LATERAIS (vidro): saem dos EXTREMOS das linhas horizontais desenhadas -- o ponto
         # onde cada linha encontra o vidro E' o canto. Regra do Vasco: os pes de um jogador
@@ -148,6 +149,16 @@ class Campo:
         if self.lat_esq is None:
             return True
         xc, y2 = self._pes(box)
+
+        # PERMISSAO PARA OS DE BAIXO (regra do Vasco, 12 jul):
+        # a camara NAO ve o fundo perto -- os jogadores de baixo saem do enquadramento.
+        # Se a box toca a borda de baixo, os pes estao FORA da imagem: nao ha ponto de
+        # apoio para testar nada. Aceita-se sem teste de pes e sem teste lateral.
+        # Nao sabemos ONDE esta exatamente -- sabemos que esta no lado de BAIXO, e chega.
+        # (A alternativa era descarta-lo, e a diretriz manda NUNCA perder um jogador.)
+        if y2 >= self.H - 2:
+            return True
+
         if y2 < self.y_fundo_longe(xc) - margem_fundo:   # atras do vidro do fundo
             return False
         if xc < float(np.polyval(self.lat_esq, y2)) - margem:
@@ -245,6 +256,66 @@ class Campo:
             if y2 > float(np.polyval(self.juncao_longe, xc)):
                 return "ATAQUE"
         return "TRANSICAO"
+
+
+
+    # ---------------- BOX CORTADA PELA BORDA: nao e' perda, e' uma COTA ----------------
+    # (regra do Vasco, 12 jul)
+
+    def cortada(self, box) -> bool:
+        """A box toca a borda de baixo -> os pes estao FORA da imagem."""
+        return box[3] >= self.H - 2
+
+    def zona_minima(self, box) -> str:
+        """A zona MAIS AVANCADA em que este jogador pode estar.
+
+        Se a box esta' cortada pela borda de baixo, o jogador esta' PELO MENOS tao
+        recuado quanto a borda -- ou seja, esta' em DEFESA, ou mais atras ainda.
+        NUNCA pode estar na rede. E' uma COTA, nao uma posicao -- mas uma cota chega
+        para a regra decidir.
+
+        Nao sabemos ONDE esta. Sabemos o que ele NAO pode estar a fazer. E' informacao.
+        """
+        if self.cortada(box):
+            return "DEFESA"
+        return self.zona(box)
+
+    def pes_estimados(self, box, altura_m=1.75):
+        """Onde estariam os PES de um jogador cortado pela borda.
+
+        A box da'-nos a CABECA. Uma pessoa tem ~1,75 m, e a calibracao da'-nos quantos
+        pixeis vale um metro naquela zona da imagem. Logo:
+
+            pes_y = topo_da_box + (altura_m * px_por_metro_local)
+
+        Resolve-se por iteracao (o px/m depende do y, que e' o que queremos saber).
+
+        ATENCAO: e' uma ESTIMATIVA, nao uma medicao. Usar para ordenar/desempatar,
+        nunca para uma regra categorica. Para essas, usar `zona_minima()`.
+
+        Devolve (x, y_estimado). O y pode cair FORA da imagem -- e' suposto.
+        """
+        x = (box[0] + box[2]) / 2.0
+        if not self.cortada(box):
+            return self._pes(box)
+
+        y = float(box[3])                      # comeca na borda
+        for _ in range(6):                     # itera: px/m depende do y
+            lado = "baixo"                     # cortada pela borda => esta' em baixo
+            ppm = max(self.meio_campo_px(x, lado) / 6.95, 1.0)
+            y_novo = float(box[1]) + altura_m * ppm
+            if abs(y_novo - y) < 1.0:
+                y = y_novo
+                break
+            y = y_novo
+        return (x, y)
+
+    def altura_esperada_px(self, x, y, altura_m=1.75) -> float:
+        """Quantos pixeis mede uma pessoa de `altura_m` naquele ponto da imagem.
+        Serve para validar boxes: uma box muito mais pequena que isto nao e' um jogador
+        aquela distancia -- e' publico ao fundo, ou meia pessoa."""
+        lado = "baixo" if y > self.y_rede_base(x) else "cima"
+        return altura_m * max(self.meio_campo_px(x, lado) / 6.95, 1.0)
 
     @staticmethod
     def fase_equipa(z1: str, z2: str) -> str:
@@ -518,3 +589,44 @@ def detetar_servicos(ball_xy, player_boxes, fps, campo: Campo,
                     servicos.append(g)          # a raquetada = o ponto começa aqui
                 break
     return servicos
+
+# ===========================================================================
+# FORMACAO DE SERVICO -- lida SO' nos 2 jogadores de CIMA   (regra do Vasco, 12 jul)
+# ===========================================================================
+
+def formacao_de_cima(boxes, campo: Campo, tol_rede=0.25):
+    """QUEM esta a servir, olhando SO' para os 2 jogadores do fundo LONGE.
+
+    PORQUE SO' OS DE CIMA: a camara nao ve o fundo perto -- os jogadores de baixo
+    saem do enquadramento. Mas os de CIMA veem-se quase sempre. E nao precisamos dos
+    de baixo: no servico as duas duplas estao em configuracoes DIFERENTES e
+    incompativeis, portanto a formacao de uma DEDUZ a da outra.
+
+        dupla que SERVE  : servidor atras + PARCEIRO NA REDE
+        dupla que RECEBE : os DOIS atras (ambos em defesa)
+
+    Logo, olhando so' para os de cima:
+        os dois ATRAS          -> eles RECEBEM  -> o servico vem de BAIXO
+        um na REDE, um ATRAS   -> eles SERVEM   -> o servico vem de CIMA
+
+    Devolve: "servico_de_baixo" | "servico_de_cima" | None (nao da' para decidir).
+    """
+    cima = [b for b in boxes if campo.lado(b) == "cima"]
+    if len(cima) != 2:
+        return None
+
+    atras, na_rede = 0, 0
+    for b in cima:
+        xc, y2 = campo._pes(b)
+        if y2 < campo.y_servico_longe(xc):              # para la' da linha de servico
+            atras += 1
+        else:
+            d = abs(y2 - campo.y_rede_base(xc))
+            if d <= tol_rede * campo.meio_campo_px(xc, "cima"):
+                na_rede += 1
+
+    if atras == 2:
+        return "servico_de_baixo"                        # eles recebem
+    if atras == 1 and na_rede == 1:
+        return "servico_de_cima"                         # eles servem
+    return None                                          # ambiguo (a meio do ponto)
