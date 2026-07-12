@@ -31,20 +31,49 @@ import sys, json, pickle
 import numpy as np
 sys.path.insert(0, ".")
 from gerar_tempo_util import (carregar, vai_e_vem, tracklets, cruzamentos, pancadas,
-                              rallies, avaliar, fim_certo, CAL, BOXES, FPS, N_FRAMES, GT)
+                              rallies, avaliar, fim_certo, ressaltos, CAL, BOXES, FPS,
+                              N_FRAMES, GT)
 
 # ---------------------------------------------------------------------------
 #  OS NÚMEROS. Não se mexem sem o Vasco dizer.
 # ---------------------------------------------------------------------------
 TRAVADO = {
-    "recall":    (96.3, 0.5),    # (valor, tolerância)
-    "precisao":  (95.9, 0.5),
+    "recall":    (96.8, 0.5),    # (valor, tolerância)   ⬆️ 96,3 -> 96,8  (S23, 13 jul)
+    "precisao":  (95.4, 0.5),    #                        ⬇️ 95,9 -> 95,4  (margens, não lixo)
     "servicos":  (13,   0),      # 13/13. NUNCA menos.
     "n_pontos":  (13,   1),      # reais: 13
     "pancadas":  (133,  5),      # a 0.7 eram 57. O 0.4 foi buscá-las. (-2: as fantasma, sem jogador)
     "fim_certo": (19,   2),      # eventos rede/mão. ⚠️ 0 DENTRO de pontos reais. Ver abaixo.
     "fim_dentro":(0,    0),      # 🔒 NUNCA >0. Um fim certo a meio de um ponto CORTA-O AO MEIO.
 }
+
+# ---------------------------------------------------------------------------
+#  13 jul 2026 (fim do dia) — 96,3/95,9  ->  96,8/95,4   ·  F1 96,1 (igual)  ·  13/13
+#  DECISÃO EXPLÍCITA DO VASCO: "podes avançar sim."
+#
+#  ENTROU A **S23 — O QUIQUE DO SERVIÇO** (regra do Vasco):
+#     "matar o lixo pela BOLA NA MÃO DO NÃO SERVIDOR — ANTES de bater no chão."
+#     "mesmo que tenha kick, SÓ O ÚLTIMO antes da mudança de campo conta."
+#
+#     A LEI:  NÃO HÁ PONTO SEM SERVIÇO. E NÃO HÁ SERVIÇO SEM A BOLA BATER NO CHÃO.
+#             o servidor larga a bola e ela QUICA · o não-servidor PASSA-A à mão (sem quique).
+#
+#  E, POR CAUSA DELA, foi possível AMPLIAR a faixa de passagem: MIN_PROF 0.35 -> 0.15.
+#  ⚠️ AS DUAS ANDAM JUNTAS. A ampliação sozinha trazia um segmento FALSO (281–285s).
+#     A S23 mata-o: 13/13 pontos reais têm quique fundo · o falso tem ZERO. Separação perfeita.
+#
+#  O QUE SE GANHOU (e é a razão de fundo, não os 0,5 de recall):
+#     os pontos 10, 11 e 13 estavam pendurados numa ÚNICA travessia. Medido: tirando-a,
+#     **O PONTO DESAPARECE**. Com o 0.15, o 10 e o 11 passam a ter 3. Saem do fio.
+#
+#  O QUE SE PAGOU: 0,5 de precisão = +2s de MARGEM nos MESMOS 13 pontos. ZERO segmentos falsos.
+#  (E a cauda do ponto 1 — +2,1s — foi aparada para +1,2s pela PAUSA APRENDIDA do Vasco, que
+#   corre DEPOIS da S23: sem o lixo a envenenar a mediana, ela aprendeu 4,9s. Chão dele: 4s.)
+#
+#  ⚠️ É A 1.ª VEZ QUE O RESSALTO ENTRA NO PIPELINE. Acerta 13/13 aqui; noutro vídeo, não se sabe.
+#     SE O 2.º VÍDEO PERDER PONTOS, DESLIGAR ISTO PRIMEIRO:
+#         python3 gerar_tempo_util.py --sem S23_QUIQUE_SERV     (e repor MIN_PROF = 0.35)
+# ---------------------------------------------------------------------------
 
 # 🔒🔒 S17 — A REGRA DA REDE ESTÁ FECHADA.
 #      "regra da rede está perfeita! fixa e não deixes mudar."  — Vasco, 13 jul 2026.
@@ -133,7 +162,8 @@ def main():
     PAN = pancadas(R, json.load(open(CAL)), pickle.load(open(BOXES,"rb"))["player_boxes"])
     FIM = fim_certo(R, json.load(open(CAL)),
                     pickle.load(open(BOXES, "rb"))["player_boxes"])
-    M = rallies(CR, PAN, FIM)
+    RES = ressaltos(R, tks)          # 🔴 S23 — sem isto, a regra do QUIQUE não corre aqui
+    M = rallies(CR, PAN, FIM, RES, R, prof)
     r = avaliar(M)
     r["pancadas"] = len(PAN)
     r["n_pontos"] = r["n"]

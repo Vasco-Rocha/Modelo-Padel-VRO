@@ -28,32 +28,13 @@ import sys, json, math, pickle
 import numpy as np
 sys.path.insert(0, ".")
 from gerar_tempo_util import (carregar, vai_e_vem, tracklets, cruzamentos, pancadas,
-                              campo, CAL, BOXES, FPS, N_FRAMES, GT, L_RAQUETE, PAD_ANTES)
+                              campo, CAL, BOXES, FPS, N_FRAMES, GT, L_RAQUETE, PAD_ANTES,
+                              ressaltos, DY_MIN)
+# 🔑 13 jul: o `ressaltos()` e o `DY_MIN` VIVEM AGORA NO `gerar_tempo_util.py` — a S23 do Vasco
+#    passou a usá-los no pipeline. Aqui IMPORTAM-SE. **Não voltar a duplicar.**
+#    (Duas cópias da mesma regra = a doença da S12: uma delas fica para trás, em silêncio.)
 
-DY_MIN = 1.0   # ⚠️ AJUSTE — píxeis de descida/subida para contar como inversão.
-               #    (declarado: é o mínimo para não contar ruído de 1 px)
 
-
-def ressaltos(R, tks):
-    """A INVERSÃO VERTICAL: a bola vinha a DESCER e passa a SUBIR. É o chão."""
-    out = []
-    for tk in tks:
-        for i in range(1, len(tk) - 1):
-            a, b, c = tk[i-1], tk[i], tk[i+1]
-            if c - a > 8:
-                continue
-            desce = R[b][1] - R[a][1]
-            sobe = R[c][1] - R[b][1]
-            if desce > DY_MIN and sobe < -DY_MIN:
-                out.append(b)
-    # agrupar (um quique dura 1-2 frames)
-    g = []
-    for f in sorted(set(out)):
-        if g and f - g[-1][-1] <= 4:
-            g[-1].append(f)
-        else:
-            g.append([f])
-    return [x[0] for x in g]
 
 
 def main():

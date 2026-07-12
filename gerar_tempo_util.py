@@ -55,9 +55,85 @@ REGRAS = {
     "S18_MAO_PARADA": True,   # bola parada na box, sem mudar de campo => fim certo
     "PAN_TEM_JOGADOR":True,   # 🆕 uma raquetada TEM de ter um jogador ao pé. Senão, ninguém bateu.
     "PAUSA_MINIMA":   True,   # 🆕 regra PERDIDA dos prompts (v7.1/v7.7/v8) — ver abaixo
+    "S23_QUIQUE_SERV":True,   # 🆕🔴 O QUIQUE DO SERVIÇO. A regra do Vasco (13 jul) — ver abaixo.
     "S18_MAO_PASSE":  False,  # ⛔ BLOQUEADA PELO RESSALTO (M3) — ver abaixo
     "S19_2_TOQUES":   False,  # ⛔ BLOQUEADA PELA PAREDE — ver abaixo
 }
+
+# ===========================================================================================
+# 🔴🔴 S23 — O QUIQUE DO SERVIÇO.   REGRA DO VASCO, 13 jul 2026.   ⚠️ NÃO PERDER ESTA REGRA.
+#
+#   "Temos de matar este lixo pela BOLA NA MÃO DO NÃO SERVIDOR — ANTES DE BATER NO CHÃO."
+#   "Mesmo que tenha kick, SÓ O ÚLTIMO antes da mudança de direção para o outro campo CONTA."
+#
+# A LEI (é do jogo, não é um limiar — sobrevive a outra câmara):
+#
+#       NÃO HÁ PONTO SEM SERVIÇO.   E NÃO HÁ SERVIÇO SEM A BOLA BATER NO CHÃO.
+#
+#       o SERVIDOR      larga a bola  ->  ela QUICA (na linha de serviço)  ->  e SÓ DEPOIS bate
+#       o NÃO SERVIDOR  tem a bola na mão  ->  PASSA-A / ATIRA-A     ⇒  **SEM QUIQUE**
+#
+#   ⇒ um segmento que arranca SEM um quique FUNDO antes da 1.ª travessia **NÃO É UM PONTO**.
+#
+# 🔑 "SÓ O ÚLTIMO CONTA" (Vasco): a bola pode quicar várias vezes no intervalo (o kick, o
+#    jogador a apanhá-la). O quique do SERVIÇO é o ÚLTIMO antes de a bola mudar de campo.
+#    Medido: com o PRIMEIRO, os inícios fugiam até 2 s para trás. Com o ÚLTIMO, ficam a <1 s.
+#
+# MEDIDO (13 jul), com o detetor do `ressalto.py` (que já acertava 13/13 nos serviços):
+#       os 13 pontos REAIS ....... 13/13 têm quique fundo antes  (prof 1,04 a 1,45)
+#       o segmento de LIXO ....... 0 quiques.  ZERO.
+#   Separação PERFEITA, sem afinar nada. Os quiques caem todos EM CIMA DA LINHA DE SERVIÇO —
+#   exactamente onde a S9 do Vasco diz que o servidor larga a bola.
+#
+# 🔓 O QUE ISTO DESBLOQUEIA: é o que permite AMPLIAR a faixa de passagem (MIN_PROF 0.35 -> 0.15)
+#    sem trazer lixo. E a ampliação tira os pontos 10 e 11 de cima de UMA travessia única
+#    (1 -> 3) — que era o risco real para o 2.º vídeo (uma travessia falha, o ponto DESAPARECE).
+#
+# ⚠️ É a 1.ª vez que o RESSALTO entra no pipeline. Acerta 13/13 aqui; noutro vídeo, não se sabe.
+#    Se o 2.º vídeo perder pontos, DESLIGA-SE ISTO PRIMEIRO (`--sem S23_QUIQUE_SERV`).
+QUIQUE_JANELA = 3.0   # ⚠️ ATALHO MEU (declarado): onde procurar o quique antes da 1.ª travessia.
+                      #    (o ressalto.py mediu os 13 quiques a 0,0–2,9 s antes)
+QUIQUE_PROF   = 0.7   # ⚠️ ATALHO MEU (declarado): "fundo" = lá atrás, na linha de serviço.
+                      #    Os 13 serviços deram prof 1,04–1,45 ⇒ folga enorme sobre o corte.
+DY_MIN        = 1.0   # ⚠️ AJUSTE (vinha do ressalto.py): píxeis de descida/subida da inversão.
+
+
+def ressaltos(R, tks):
+    """O QUIQUE — a inversão VERTICAL: a bola vinha a DESCER e passa a SUBIR. É o chão.
+    (O `Theta` do BlurBall dá a direção a ~2° numa ÚNICA deteção ⇒ vê-se a componente vertical.)
+        o CHÃO    inverte na VERTICAL    (desce -> sobe)   <- é ISTO
+        a PAREDE  inverte na HORIZONTAL  (vai -> volta)
+        a RAQUETE inverte em qualquer direção — mas tem um JOGADOR ao pé
+    ⚠️ DEFINIDA AQUI, UMA SÓ VEZ. O `ressalto.py` importa-a daqui — não duplicar
+       (duas cópias da mesma regra é a doença da S12: uma delas fica para trás em silêncio)."""
+    out = []
+    for tk in tks:
+        for i in range(1, len(tk) - 1):
+            a, b, c = tk[i-1], tk[i], tk[i+1]
+            if c - a > 8:
+                continue
+            if R[b][1] - R[a][1] > DY_MIN and R[c][1] - R[b][1] < -DY_MIN:
+                out.append(b)
+    g = []
+    for f in out:
+        if not g or f - g[-1][-1] > 3:
+            g.append([f])
+        else:
+            g[-1].append(f)
+    return [x[0] for x in g]
+
+
+def quique_do_servico(a, b, CR, R, RES, prof):
+    """S23 — o quique do SERVIÇO deste segmento, ou None se não houver (⇒ não é um ponto).
+    🔑 O ÚLTIMO quique FUNDO antes da 1.ª travessia (Vasco: "só o último conta")."""
+    cs = [c for c in CR if a <= c <= b]
+    if not cs:
+        return None
+    c0 = min(cs)
+    j0 = c0 - int(QUIQUE_JANELA * FPS)
+    qs = [q for q in RES if j0 <= q <= c0 and q in R
+          and prof(R[q][0], R[q][1])[1] >= QUIQUE_PROF]
+    return max(qs) if qs else None
 
 # ⛔ S19_2_TOQUES — REGRA DO VASCO (13 jul), CERTA, MAS BLOQUEADA. NÃO LIGAR SEM O M3.
 #    "2 toques na raquete sem mudança de campo/direção da bola para o outro campo = fim do ponto."
@@ -154,7 +230,17 @@ GAP_THETA  = 20
 TOL_THETA  = 35     # graus
 L_COSTURA  = 1      # baixo de propósito: é o que deixa passar o BALÃO (bola lenta)
 MIN_DET    = 4
-MIN_PROF   = 0.35   # ⚠️ ATALHO
+MIN_PROF   = 0.15   # ⚠️ ATALHO. 🔴 ERA 0.35 até 13 jul — A FAIXA CEGA À VOLTA DA REDE.
+                    #    O Vasco: "os de cá, perto da rede, devolvem a bola muito ALTA e PERTO
+                    #    da rede — não dá tempo à bola de passar, nos frames." Tinha razão:
+                    #    a 0.35 o código ignorava tudo num raio de 35% do meio-campo à volta da
+                    #    rede ⇒ o VOLLEY à rede atravessava e morria lá dentro, invisível.
+                    #    A 0.35: 55 travessias, e os pontos 10/11/13 penduradas em UMA SÓ
+                    #      (tirar essa travessia => O PONTO DESAPARECE. Medido.)
+                    #    A 0.15: 65 travessias. Pontos 10 e 11 passam de 1 -> 3. Deixam o fio.
+                    #    ⚠️ SÓ SE PODE BAIXAR PORQUE A S23 (quique do serviço) MATA O LIXO QUE
+                    #       ISTO TRAZIA. As duas andam JUNTAS. Desligar a S23 sem repor o 0.35
+                    #       traz de volta o segmento falso dos 281s.
 L_RAQUETE  = 11     # ⚠️ ATALHO — a regra (mão vs raquete) é lei; o NÚMERO é ajuste
 PAN_DTHETA = 20     # ⚠️ ATALHO
 PAN_L      = 7      # ⚠️ ATALHO
@@ -408,7 +494,7 @@ def pancadas(R, cal=None, boxes=None):
     return [g[0] for g in ag]
 
 
-def rallies(CR, PAN, FIM=()):
+def rallies(CR, PAN, FIM=(), RES=(), R=None, prof=None):
     grp = [[CR[0]]]
     for c in CR[1:]:
         if c - grp[-1][-1] <= SILENCIO * FPS:
@@ -452,6 +538,14 @@ def rallies(CR, PAN, FIM=()):
         else:
             M.append([a, b])
 
+    # 🔴 S23 — O QUIQUE DO SERVIÇO (Vasco, 13 jul).  "NÃO HÁ PONTO SEM SERVIÇO, E NÃO HÁ
+    #    SERVIÇO SEM A BOLA BATER NO CHÃO." Um segmento sem quique FUNDO antes da 1.ª travessia
+    #    não é um ponto — é o NÃO-SERVIDOR a passar a bola à mão (não a deixa quicar).
+    #    ⚠️ CORRE ANTES DA PAUSA: se o lixo entrasse na mediana das pausas, envenenava-a.
+    #    Medido: 13/13 pontos reais têm quique fundo · o lixo tem ZERO. Separação perfeita.
+    if REGRAS["S23_QUIQUE_SERV"] and RES and R is not None and prof is not None:
+        M = [s for s in M if quique_do_servico(s[0], s[1], CR, R, RES, prof) is not None]
+
     # PAUSA MÍNIMA (regra perdida dos prompts + a nota do Vasco: aprender por dupla).
     # Uma pausa curta demais entre pontos é IMPOSSÍVEL: a CAUDA do anterior está esticada.
     # 2 passagens: aprende o ritmo DESTE jogo, depois apara. Só a cauda; nunca o início.
@@ -491,9 +585,10 @@ def main():
     boxes = pickle.load(open(BOXES, "rb"))["player_boxes"]
     PAN = pancadas(R, cal, boxes)
     FIM = fim_certo(R, cal, boxes)
+    RES = ressaltos(R, tks)                      # 🔴 S23 — os quiques (o chão)
     print(f"tracklets {len(tks)} | cruzamentos {len(CR)} | pancadas {len(PAN)} | "
-          f"fins certos (rede/mão) {len(FIM)}")
-    M = rallies(CR, PAN, FIM)
+          f"fins certos (rede/mão) {len(FIM)} | quiques {len(RES)}")
+    M = rallies(CR, PAN, FIM, RES, R, prof)
     r = avaliar(M)
     print(f"\n>>> {r['n']} pontos (reais: {len(GT)}) | {r['tempo']:.1f}s (reais: {sum(b-a for a,b in GT):.1f}s)")
     print(f">>> servicos {r['servicos']}/{len(GT)}")

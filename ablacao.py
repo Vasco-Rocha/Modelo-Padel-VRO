@@ -86,7 +86,8 @@ def corre(sem=None, flags=None, **over):
     CR = G.cruzamentos(R, tks, prof)
     PAN = [] if "pancadas" in sem else G.pancadas(R, CAL_J, PB)
     FIM = G.fim_certo(R, CAL_J, PB)
-    r = G.avaliar(G.rallies(CR, PAN, FIM))
+    RES = G.ressaltos(R, tks)        # 🔴 S23 — o quique do serviço (Vasco, 13 jul)
+    r = G.avaliar(G.rallies(CR, PAN, FIM, RES, R, prof))
     r["pancadas"] = len(PAN)
     r["fim_dentro"] = sum(1 for f in FIM if gt[f] and not fg[f])
 
@@ -109,6 +110,11 @@ TESTES = [
     ("vai-e-vem (B8)",         dict(sem={"vai_e_vem"})),
     ("min_det (tracklets)",    dict(over=dict(MIN_DET=1))),
     ("PAUSA MINIMA (prompts)",  dict(flags={"PAUSA_MINIMA": False})),
+    # 🔴 S23 — o QUIQUE DO SERVIÇO (Vasco, 13 jul). Anda JUNTA com o MIN_PROF=0.15:
+    #    desligá-la SEM repor o 0.35 deixa entrar o segmento falso dos 281s. É isso que se mede.
+    ("S23 quique do servico", dict(flags={"S23_QUIQUE_SERV": False})),
+    ("S23 OFF + MIN_PROF .35 (estado antigo)",
+                             dict(flags={"S23_QUIQUE_SERV": False}, over=dict(MIN_PROF=0.35))),
 ]
 
 
