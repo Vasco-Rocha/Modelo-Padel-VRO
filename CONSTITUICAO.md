@@ -226,6 +226,83 @@ regras dele que nunca correram.** *(Ao contrário do `m1_tempo_util.py`, que era
 
 ---
 
+---
+
+# 📐 O CAMPO — **A CALIBRAÇÃO É A RÉGUA DE TUDO**   *(e é a 1.ª coisa do vídeo novo)*
+
+> **Um erro aqui envenena TUDO o que está por baixo — e não dá erro. Dá números errados em silêncio.**
+
+| | |
+|---|---|
+| **C1** 🔒 | **CAMPO NOVO = CALIBRAÇÃO NOVA, À MÃO**, no `calibrar_campo.html`. ⛔ **NÃO AUTO-DETETAR** *(a auto-deteção pôs a linha de serviço **40 px** ao lado)* |
+| **C2** | **a malha 2/3 NUNCA se deteta** — não é linha branca. **Desenha-se sempre.** |
+| **C3** | **a central CALCULA-SE** (pontos médios das linhas de serviço + base da rede). **Não se marca.** |
+| **C4** | os **extremos das linhas são os cantos** ⚠️ **descartar os que tocam a BORDA DO FRAME** — a borda **não é o vidro** |
+| **C5** | **3 pontos = curvatura · 2 pontos = herdam-na.** A lente **curva** as linhas. |
+| **C6** | **a câmara é FRONTAL** — fixa, **atrás do vidro de fundo**, a meia altura. **É o pressuposto de todo o sistema.** |
+| **C11** | **o campo é 20 × 10 m.** É a régua de todas as conversões. |
+| **C9** | ✏️ **ANOTA POLILINHAS, NÃO PONTOS.** *"Os cantos desaparecem; **as linhas não**."* |
+| **C10** | 🔭 **A DISTORÇÃO DE LENTE NÃO É OPCIONAL.** Sob distorção de barril, **uma homografia planar é matematicamente incapaz** de bater certo em todo o campo. |
+
+### 🦶 E O POLÍGONO DOS JOGADORES — **duas regras que mordem no vídeo novo**
+| | |
+|---|---|
+| **J15** | 🔲 **O POLÍGONO DESENHA-SE LARGO, NÃO APERTADO.** *"Se ficar apertado, corta jogadores encostados ao vidro."* ⚠️ **INCLUI OS ESPAÇOS LATERAIS — o JOGO EXTERIOR é jogo LEGAL.** *(Foi por isto que se matou a regra "bola sai de campo = fim".)* |
+| **J14** | 🎣 **DETETAR GENEROSAMENTE, LIMPAR PELA ESTRUTURA.** `CONF` **baixo** + `IMGSZ` **alto**; **as regras do JOGO é que limpam** — não um limiar do detetor. ⛔ **É por isto que o `max_det=4` está errado:** ele ordena por **confiança**; o critério certo é a **GEOMETRIA (os pés no polígono)**. |
+
+⚠️ **A calibração e o ground-truth são POR VÍDEO.** Nunca escrever por cima da do Parada4 — **é a base
+do `teste_regressao`.** Campo novo ⇒ `calibracao_<video>.json`, **ficheiro NOVO**.
+
+---
+
+# ⚪ AS REGRAS DA BOLA QUE TAMBÉM CORREM
+
+| | a LEI (dele) |
+|---|---|
+| **B1** | **objetos imóveis não são a bola.** *"A bola nunca pousa duas vezes no mesmo sítio."* |
+| **B2** | **a bola não se teletransporta.** 🔑 **LEI: a bola de padel não passa dos 180 km/h** ⇒ `VMAX=70 px/frame` *(era 90, inventado — que ao fundo do campo permitia **710 km/h**)*. ⚠️ **e é um parâmetro MORTO**: quem trabalha é a **costura por Theta (B6)**. |
+| **B2b** | ⚠️ **A RÉGUA É DO CHÃO. A BOLA VOA.** O meio-campo local vale para os **PÉS** e os **RESSALTOS**; **NÃO** para a bola em voo *(aplicá-lo à bola: recall 96 → **32**)*. **A régua do chão dá um MÍNIMO, não um máximo.** |
+| **B7** | **bola fora > 2 s ⇒ vem aí um serviço** |
+| **S1** | a **zona de serviço** aprende-se **dos dados** *(bola no chão junto a um jogador atrás da linha)* |
+| **S5** | **o serviço é MULTI-FATOR.** **Nenhum sinal sozinho chega. Combinar.** |
+
+---
+
+# 🚨 A ARMADILHA DOS JOGADORES — **"✅" no mapa, mas NÃO CORREM no pipeline**
+
+**As regras J2, J3, J4, J7, J8** estão marcadas **✅ implementadas** — e estão. **Em `padelpro/modules/servico.py`.**
+**Que o pipeline do tempo útil NÃO IMPORTA.**
+
+> ## **"Implementada" ≠ "a correr".**
+> **O pipeline dos 96,8% usa SÓ A BOLA.** As boxes dos jogadores servem apenas para responder a
+> *"havia alguém ao pé?"* (S37, S17, S18).
+
+⚠️ **`servico.py` NÃO SE APAGA** — parece morto (ninguém o importa), **mas tem regras dele que nunca
+correram**. *(Ao contrário do `m1_tempo_util.py`, que era só uma cópia velha do que já corre.)*
+**Pôr a cascata J a correr é trabalho por fazer, não trabalho perdido.**
+
+---
+
+---
+
+# 🔎 AS OUTRAS QUE CORREM — *(menos visíveis, igualmente vivas)*
+
+| | |
+|---|---|
+| **P5** | 🔎 **A PANCADA, EM CÓDIGO:** a bola **aproxima-se** da box (mínimo local) **e depois a trajetória MUDA** (afasta-se noutra direção). **Não é a proximidade — é a proximidade SEGUIDA de mudança.** |
+| **S33** | 🎾 **VALIDADE DO SERVIÇO:** ✅ **válido** = cai no quadrado **CRUZADO** sem tocar na malha · 🔄 **LET** = toca na fita **e cai dentro** · ❌ **falta** = o resto |
+| **D6** | ✅ **AUTO-VERIFICAÇÃO ANTES DE EMITIR.** Os totais batem certo? `fim > início`? Sem sobreposições? **Verifica ANTES de mostrar.** |
+| **F2 · F3** *(M2)* | 🧱 a fase é da **EQUIPA**, pela **regra das DUAS BOXES** *(só é DEFESA se estiverem **ambos** atrás)* · 📍 **a posição é a ARESTA INFERIOR da box** (o contacto com o **solo**) — **nunca** a cabeça, o tronco ou a raquete |
+
+---
+
+# 📖 E ESTA CONSTITUIÇÃO **NÃO SUBSTITUI** O `REGRAS_DO_VASCO.md`
+
+**São 117 regras.** Aqui estão **as que mandam no dia-a-dia** — as que correm, as que estão fechadas,
+e as leis que não se negoceiam. **As outras estão lá. Vai lá lê-las.**
+
+---
+
 # 📐 AS LEIS QUE JÁ CUSTARAM CARO
 
 1. 🏃 **SÓ O QUE SE CORRE É QUE CONTA.** Nunca dizer *"está feito"* a partir de uma lista de ficheiros.
