@@ -1,7 +1,12 @@
 # Ground-truth — rallies reais do Parada 4 (anotados pelo Vasco, jul 2026)
 
 Anotado com o anotador_rallies (serviço → fim do ponto). Esta é a VERDADE para avaliar o pipeline.
-Jogo real = **117s** em **12 rallies** (o corte manual WhatsApp tinha 132.2s = +15s de margens do editor).
+⚠️ **13 jul 2026 — ACRESCENTADO O 13.º RALLY.** O Vasco confirmou: *"é serviço, começa onde está
+destacado e acaba pelo fim do vídeo"*. **FALTAVA.** O pipeline encontrou-o sozinho e eu chamei-lhe
+"segmento falso" durante um dia inteiro. A precisão estava a castigar-me por **acertar**.
+👉 **O ground-truth é a régua de tudo. Se está incompleto, TUDO o que se mede está torto.**
+
+Jogo real = **119,6s** em **13 rallies** (o corte manual WhatsApp tinha 132.2s = +15s de margens do editor).
 
 | # | início | fim | dur |
 |---|--------|-----|-----|
@@ -17,6 +22,7 @@ Jogo real = **117s** em **12 rallies** (o corte manual WhatsApp tinha 132.2s = +
 | 10 | 03:49.9 | 03:57.3 | 7.4s |
 | 11 | 04:09.6 | 04:15.0 | 5.4s |
 | 12 | 04:23.8 | 04:36.4 | 12.6s |
+| **13** | **04:49.1** | **04:51.7** | **2.6s** |
 
 ## Avaliação do pipeline (versão 16 rallies) contra esta verdade
 - Recall 72% (84 de 117s de jogo real apanhados), Precisão 63% (dos 133s, só 84 são jogo).
@@ -29,7 +35,8 @@ Jogo real = **117s** em **12 rallies** (o corte manual WhatsApp tinha 132.2s = +
 GT em segundos:
 ```python
 GT=[(38.0,41.5),(46.8,67.5),(77.6,85.5),(95.9,111.1),(122.4,135.9),(157.9,169.4),
-    (178.1,186.5),(197.0,202.1),(210.5,216.3),(229.9,237.3),(249.6,255.0),(263.8,276.4)]
+    (178.1,186.5),(197.0,202.1),(210.5,216.3),(229.9,237.3),(249.6,255.0),(263.8,276.4),
+    (289.1,291.7)]   # 13.o — acrescentado 13 jul. Fica CORTADO pelo fim do video.
 ```
 Comparar os rallies do pipeline com GT por sobreposição → recall (jogo apanhado/117s), precisão (jogo/total do pipeline),
 e por rally: partido? começa tarde? acaba cedo? falso?

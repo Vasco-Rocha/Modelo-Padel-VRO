@@ -35,17 +35,42 @@ GT = [(38.0,41.5),(46.8,67.5),(77.6,85.5),(95.9,111.1),(122.4,135.9),(157.9,169.
       (289.1,291.7)]   # 13.º: o Vasco confirmou (13 jul) — é serviço, e fica CORTADO pelo fim do vídeo
 
 # ===========================================================================================
+#  🎬 O 2.º VÍDEO — outra câmara, outro campo.   `python3 gerar_tempo_util.py --dados barbosa`
+#
+#  ⚠️ SÓ TROCA OS **DADOS**: caminhos, FPS, N_FRAMES, GT.  **NENHUM limiar muda.**
+#     É o compromisso da RECEITA_VIDEO_NOVO.md, assumido ANTES de ver os resultados:
+#     afinar um parâmetro ao vídeo novo torna o teste INÚTIL (ficávamos com dois vídeos decorados).
+#
+#  Sem `--dados`, corre EXACTAMENTE o Parada4 — o teste_regressao.py não dá por nada.
+# ===========================================================================================
+if "--dados" in sys.argv and sys.argv[sys.argv.index("--dados")+1] == "barbosa":
+    FPS      = 29.97                 # medido: 30000/1001 — o MESMO do Parada4 (sorte: os
+    N_FRAMES = 16138                 #         parâmetros em SEGUNDOS atravessam sem conversão)
+    BOLA  = "../dados_BarbosaMeireles/traj_frames_BarbosaMeireles_thr04.csv"
+    BOXES = "../dados_BarbosaMeireles/player_boxes_BarbosaMeireles.pkl"
+    CAL   = "calibracao_BarbosaMeireles.json"
+    VIDEO = "../BarbosaMeireles.mp4"
+    GT    = []                       # 🔴 AINDA NÃO EXISTE. Sem GT não há recall nem precisão:
+                                     #    o vídeo mostra o que ele ENCONTROU, não o que DEIXOU CAIR.
+
+# ===========================================================================================
 #  🎛️  OS INTERRUPTORES.   Qualquer regra se desliga aqui, sem tocar em código.
 #
 #  "deixa estas regras aptas a serem mudadas / recuperadas para a antiga caso não funcionem"
 #                                                                        — Vasco, 13 jul 2026
-#      python3 gerar_tempo_util.py --sem S18_MAO_PASSE      # desliga UMA regra
+#      python3 gerar_tempo_util.py --sem S23_QUIQUE_SERV    # desliga UMA regra
 #      python3 ablacao.py                                   # a contribuição de CADA uma
 #
 #  🔒 S17_REDE está FECHADA pelo Vasco. Desliga-se para medir, NUNCA se afina.
 # ===========================================================================================
 REGRAS = {
-    "B8_VAI_E_VEM":   True,   # A->B longe, A->C perto => B é erro
+    "B14_VAI_E_VEM":  True,   # A->B longe, A->C perto => B é erro
+                              # ⚠️ chamava-se "B8_VAI_E_VEM" até 13 jul. RENOMEADO: a regra é a
+                              # B14 (foi renumerada no REGRAS_DO_VASCO.md por colidir com a B8
+                              # verdadeira = coerência temporal, que está POR IMPLEMENTAR).
+                              # Um interruptor com o nome de OUTRA regra é a colisão da S23 em
+                              # câmara lenta: quem for implementar a B8 a sério encontrava o
+                              # nome ocupado. — Vasco, 13 jul
     "B6_THETA":       True,   # costura os buracos pela direção (2°)
     "S15_MAO_RAQUETE":True,   # só cruza quem veio da RAQUETE (L alto)
     "S12_ULT_PANCADA":True,   # o fim segue a última PANCADA (não o último cruzamento)
@@ -56,9 +81,17 @@ REGRAS = {
     "PAN_TEM_JOGADOR":True,   # 🆕 uma raquetada TEM de ter um jogador ao pé. Senão, ninguém bateu.
     "PAUSA_MINIMA":   True,   # 🆕 regra PERDIDA dos prompts (v7.1/v7.7/v8) — ver abaixo
     "S23_QUIQUE_SERV":True,   # 🆕🔴 O QUIQUE DO SERVIÇO. A regra do Vasco (13 jul) — ver abaixo.
-    "S18_MAO_PASSE":  False,  # ⛔ BLOQUEADA PELO RESSALTO (M3) — ver abaixo
-    "S19_2_TOQUES":   False,  # ⛔ BLOQUEADA PELA PAREDE — ver abaixo
 }
+# ⛔ AQUI NÃO ESTÃO a S18_MAO_PASSE nem a S19_2_TOQUES — e é de propósito (Vasco, 13 jul).
+#    Estavam aqui, a False, SEM CÓDIGO NENHUM POR TRÁS. Pô-las a True não fazia nada.
+#
+#    "Uma regra DESLIGADA é uma escolha. Um interruptor VAZIO é uma armadilha."  — Vasco
+#
+#    O custo era concreto: daqui a um mês alguém punha S19_2_TOQUES=True à espera de ver
+#    os números mexer, não mexiam, e passava a tarde a procurar um bug que não existe.
+#    O PORQUÊ de as duas terem morrido está intacto — nos blocos ⛔ mais abaixo, com os
+#    números que as mataram. Se um dia forem implementadas a sério, o interruptor NASCE
+#    NESSE DIA, com o código atrás. É assim que deve ser.
 
 # ===========================================================================================
 # 🔴🔴 S23 — O QUIQUE DO SERVIÇO.   REGRA DO VASCO, 13 jul 2026.   ⚠️ NÃO PERDER ESTA REGRA.
@@ -391,7 +424,7 @@ def fim_certo(R, cal, boxes):
 
 def vai_e_vem(R):
     """S/B8 — A->B longe, A->C perto  =>  B é ERRO. Tira o frame, não parte a cadeia."""
-    if not REGRAS["B8_VAI_E_VEM"]:
+    if not REGRAS["B14_VAI_E_VEM"]:
         return R
     fs = sorted(R)
     mortos = []
@@ -590,9 +623,15 @@ def main():
           f"fins certos (rede/mão) {len(FIM)} | quiques {len(RES)}")
     M = rallies(CR, PAN, FIM, RES, R, prof)
     r = avaliar(M)
-    print(f"\n>>> {r['n']} pontos (reais: {len(GT)}) | {r['tempo']:.1f}s (reais: {sum(b-a for a,b in GT):.1f}s)")
-    print(f">>> servicos {r['servicos']}/{len(GT)}")
-    print(f">>> RECALL {r['recall']:.1f}%   PRECISAO {r['precisao']:.1f}%   F1 {r['f1']:.1f}")
+    if not GT:
+        # 🔴 sem ground-truth NÃO se inventam métricas. 0.0% seria uma MENTIRA com ar de número.
+        print(f"\n>>> {r['n']} segmentos | {r['tempo']:.1f}s de tempo útil")
+        print(">>> ⚠️  SEM GROUND-TRUTH — não há recall nem precisão. VÊ O VÍDEO.")
+        print(">>>    O vídeo mostra o que ele ENCONTROU. Não mostra o que DEIXOU CAIR.")
+    else:
+        print(f"\n>>> {r['n']} pontos (reais: {len(GT)}) | {r['tempo']:.1f}s (reais: {sum(b-a for a,b in GT):.1f}s)")
+        print(f">>> servicos {r['servicos']}/{len(GT)}")
+        print(f">>> RECALL {r['recall']:.1f}%   PRECISAO {r['precisao']:.1f}%   F1 {r['f1']:.1f}")
 
     if "--video" in sys.argv:
         lst = "\n".join(f"file 'tu{i:02d}.mp4'" for i in range(1, len(M)+1))
