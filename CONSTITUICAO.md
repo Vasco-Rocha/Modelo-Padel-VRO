@@ -303,7 +303,47 @@ e as leis que não se negoceiam. **As outras estão lá. Vai lá lê-las.**
 
 ---
 
-# 📐 AS LEIS QUE JÁ CUSTARAM CARO
+---
+
+# ⚖️ AS LEIS DE DESENHO — **D1 a D18.**   *(as mais valiosas e as mais invisíveis)*
+
+**Estas não são tarefas. São como se PENSA.** Valem para tudo o que se fizer neste projeto.
+
+| | |
+|---|---|
+| **D1** | 🤔 **EM DÚVIDA, MANTÉM O ESTADO ANTERIOR.** O estado tem **INÉRCIA** (histerese). ⚠️ **É o antídoto para o JITTER** — o inimigo nº 1 do M2. |
+| **D2** | 🚫 **NÃO INVENTAR. SE NÃO ANCORA NUM EVENTO VISUAL CLARO, OMITE.** *(Escrita pelo Vasco há um mês. **É a lei que rege o projeto todo.**)* |
+| **D3** | 📏 **PRECISÃO HONESTA.** *"Não finjas precisão absoluta."* Incerteza grande ⇒ **diz que é grande.** |
+| **D4** | 🗣️ **A DÚVIDA TEM NOME.** Não consegues classificar? ⇒ **`indeterminado`.** Não inventes uma categoria. |
+| **D5** | 👁️ **OBSERVAR ANTES DE CLASSIFICAR.** O raciocínio vem **ANTES** da resposta — nunca a justificar uma resposta já dada. |
+| **D6** | ✅ **AUTO-VERIFICAÇÃO ANTES DE EMITIR.** Os totais batem certo? `fim > início`? Sem sobreposições? |
+| **D7** | 🚫 **NUNCA OMITIR UM *RALLY*** *(≠ omitir um EVENTO)*. Ambíguo ⇒ **marca `confiança: baixa`** — mas **não o deites fora.** |
+| **D8** | 📉 **`confiança` 0,0–1,0 em cada entrada.** Incerteza **explícita**, não escondida. |
+| **D9** | 🎣 **RECALL PELA DETEÇÃO · PRECISÃO PELA ESTRUTURA.** **Detetar generosamente; limpar com as REGRAS DO JOGO** — nunca com um limiar do detetor. |
+| **D10** | 📐 **GEOMETRIA > MODELO.** *"Sempre que algo se reduz a **comparar posições com linhas**, faz-se com **geometria** — não com um modelo."* ⚠️ **É a lição do `max_det=4`:** ele ordenava por **confiança** quando o critério certo era **os pés no polígono.** |
+| **D11** | 🩼 **AS REGRAS DE GAP ERAM MULETA DO DETETOR FRACO.** Com um detetor forte, o que separa é a **ESTRUTURA**, não o buraco. |
+| **D12** | 🛑 **"NÃO ESCREVER MAIS REGRAS. MELHORAR O SINAL."** ⚠️ **É o contrapeso de tudo isto.** Quando as regras já dão 0 falsos e o problema continua, **o problema é o SINAL** — não faltam regras. |
+| **D13** | 📊 **FAIXA FINA = OBSERVÁVEL · ÁREA GRANDE = AMBÍGUA.** A rede (35 px) funciona; o vidro (meio ecrã) não. **Serve para prever se uma ideia tem hipótese ANTES de a testar.** |
+| **D14** | 🤝 **DUAS LEITURAS INDEPENDENTES; SE SE CONTRADIZEM, NÃO INVENTA.** *(Diz que não sabe.)* |
+| **D15** | 🔒 **UM "FIM CERTO" NUNCA PODE CAIR A MEIO DE UM PONTO** (`fim_dentro = 0`). **Se subir: DESLIGA a regra. NUNCA relaxes o teste.** É o **pior erro possível**. |
+| **D16** | ➕ **SINAIS INDEPENDENTES SOMAM.** A bola e os jogadores **não competem — SOMAM.** |
+| **D17** | 🧐 **CONFIRMAR A PREMISSA ANTES DE ACEITAR A CONCLUSÃO.** *(Uma conclusão bonita em cima de uma premissa não verificada é como se perderam duas regras hoje.)* |
+| **D18** | ⚖️ **NENHUMA REGRA DO JOGO PODE VETAR UM CANDIDATO.** Há sempre uma **exceção legítima** (ponto de ouro, tie-break, let). **Todas PONTUAM. Nenhuma CORTA.** Escolhe-se a **sequência globalmente mais consistente**. |
+
+---
+
+# 📚 E O RESTO — **69 regras POR IMPLEMENTAR** *(o M2, o M3, as pancadas, a cor)*
+
+**Não estão aqui de propósito.** Isto é a **constituição**, não o inventário.
+👉 **Estão TODAS em `REGRAS_DO_VASCO.md`.** *(B3-B12 · C7-C12 · F1-F12 · J11-J13 · P1-P6 · S7, S9,
+S11, S22, S24-S26, S29, S31-S41.)*
+
+> **Se vais trabalhar numa área, VAI LÊ-LAS PRIMEIRO.** É o que a **1.ª e a 2.ª releitura** existem
+> para garantir. **Não assumas que sabes o que lá está.**
+
+---
+
+# 📐 AS 8 LIÇÕES QUE CUSTARAM MAIS CARO   *(as que se pagaram em DIAS)*
 
 1. 🏃 **SÓ O QUE SE CORRE É QUE CONTA.** Nunca dizer *"está feito"* a partir de uma lista de ficheiros.
    **Correr. Ver o vídeo. Medir.**
