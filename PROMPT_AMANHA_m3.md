@@ -352,6 +352,24 @@ baixa o Parada4 para 640×360 (e 480×270) → corre o BlurBall → corre o test
    cai?               ⇒ sabes quanto custa cada píxel, e paras onde deves
 ```
 
+### 💡 **A IDEIA DO VASCO: CORRER OS DOIS EM PARALELO** *(13 jul)*
+> *"assim que se faz um upload, **dois notebooks em simultâneo** — bola no Kaggle, jogadores no Colab."*
+
+**É válida, e por uma razão estrutural: os dois detetores são INDEPENDENTES.** A bola não precisa dos
+jogadores nem vice-versa ⇒ o tempo passa de **SOMA** para **MÁXIMO** (~50 min → ~25-30 min).
+
+⚠️ **Mas TRÊS coisas — nenhuma a mata, só a põem na ordem certa:**
+1. **Não ataca o gargalo MEDIDO.** 26 GB de PNGs para 522 KB de sinal é **DISCO**, não GPU.
+   Paralelizar **não o resolve: DUPLICA-O.**
+2. **Dois ambientes = a DOENÇA outra vez.** Já aconteceu: o `.pkl` do Colab e o do Mac **não bateram
+   certo** (versões diferentes do ByteTrack). ⇒ **`requirements` TRAVADOS, e o guarda a verificá-lo.**
+3. **O upload é o custo escondido:** 544 MB **× 2**. O vídeo devia viver **num sítio só** e os dois
+   notebooks **irem lá buscá-lo**.
+
+**⇒ A ORDEM: 1) apagar os PNGs · 2) baixar a resolução (testar no Parada4) · 3) RE-MEDIR ·
+4) só então paralelizar — se ainda fizer falta.**
+
+
 ---
 
 # 🚨 UMA CANETA DE CADA VEZ

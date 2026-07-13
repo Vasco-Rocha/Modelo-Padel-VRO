@@ -162,6 +162,39 @@ temos **régua** (ground-truth, 13 rallies, 96,8/95,4).
 ```
 **É a mesma lei de sempre: só o que se corre é que conta.**
 
+### 💡 **A IDEIA DO VASCO (13 jul): CORRER OS DOIS EM PARALELO**
+> *"fazer uma associação entre as duas que automatize: assim que se faz um upload, **dois notebooks
+> em simultâneo** — bola no Kaggle, jogadores no Colab."*
+
+**Ela é válida, e a razão é estrutural: os dois detetores são INDEPENDENTES.** A bola não precisa dos
+jogadores nem vice-versa. Logo o tempo passa de **SOMA** para **MÁXIMO**:
+```
+hoje (em série):  bola + jogadores  =  ~50 min
+em paralelo:      max(bola, jogadores)  ≈  ~25-30 min
+```
+
+⚠️ **MAS — três coisas, e nenhuma a mata; só a põem na ordem certa:**
+
+1. **Não ataca o gargalo que MEDIMOS.** O que medimos foi **26 GB de PNGs para 522 KB de sinal** —
+   isso é **DISCO**, não GPU. Correr em paralelo **não o resolve: DUPLICA-O**.
+2. **Dois ambientes = a DOENÇA outra vez.** Kaggle + Colab são **duas fontes a envelhecer em direções
+   diferentes**. Já aconteceu hoje: o `.pkl` do Colab e o do Mac **não bateram certo** (versões
+   diferentes do ByteTrack; o `max_det=4` escolheu espectadores diferentes).
+   ⇒ **Se se fizer: `requirements` TRAVADOS nos dois, e o guarda a verificá-lo.**
+3. **O upload é o custo escondido.** 544 MB **× 2**. O vídeo devia viver **num sítio só** (Drive, ou um
+   release do GitHub) e os dois notebooks **irem lá buscá-lo**.
+
+### ⇒ A ORDEM
+```
+1. apagar os PNGs ................ grátis, zero risco, 26 GB
+2. baixar a resolução ............ TESTAR NO PARADA4, onde há RÉGUA
+3. RE-MEDIR
+4. só então: PARALELIZAR — se ainda fizer falta
+```
+**Depois de 1 e 2, o problema pode encolher tanto que o paralelismo deixe de fazer sentido.**
+E se continuar a doer, é o passo óbvio — mas aí **já sabemos quanto vale**, em vez de o adivinharmos.
+
+
 ---
 
 # ➡️ O QUE VEM A SEGUIR
