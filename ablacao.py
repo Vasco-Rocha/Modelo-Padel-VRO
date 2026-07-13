@@ -11,21 +11,14 @@ E depois: *"podes confirmar regra a regra o que acontece aos números quando as 
 
 Sem isto, eu defendia regras pelo que elas valiam ONTEM. A ablação mostra o que valem HOJE.
 
-RESULTADO (12 jul 2026, bola a thr=0.4)
----------------------------------------
-BASE: 15 pontos · RECALL 93,2% · PRECISÃO 89,4% · 12/12 serviços
+⛔ NÃO ESCREVER OS RESULTADOS AQUI. Uma tabela num docstring APODRECE — e depois MENTE.
+   (Esta tinha "BASE: 15 pontos · RECALL 93,2 · PRECISÃO 89,4" **muito depois de ser falso**.
+    Hoje são 13 pontos. Quem lesse isto acreditava.)
 
-  desligar                 recall   precisão   veredito
-  mao vs raquete (S15)      +0,9     -30,5     🥇 a regra mais valiosa do sistema
-  costura por Theta        -12,6      +4,3     🥈 e leva os serviços de 12 para 9
-  pancadas (S12)            +4,5     -13,6     🥉
-  S16 INVERTIDA             -0,3     -12,1     inverter custa 12 pontos. NÃO INVERTER.
-  cruzamento profundo        0,0      -6,8     vale
-  vai-e-vem (B14)            -0,7      -0,1     ⚠️ ver abaixo
-  min_det (tracklets)        0,0       0,0     ⚠️ NÃO FAZ NADA
+   👉 OS NÚMEROS SAEM DE CORRER:   python3 ablacao.py
 
-AS DUAS DESCOBERTAS
--------------------
+AS DESCOBERTAS QUE NÃO APODRECEM (são LIÇÕES, não números)
+----------------------------------------------------------
 ⚠️ **min_det é um parâmetro MORTO.** MIN_DET=1 dá exactamente os mesmos números.
    Está lá a fingir que trabalha.
 

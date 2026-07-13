@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🔒 TESTE DE REGRESSÃO — TRAVA O ESTADO DE 12 JUL 2026.
+🔒 TESTE DE REGRESSÃO — TRAVA O ESTADO. (a data e os números vivem no dict TRAVADO, em baixo)
 
     python3 teste_regressao.py
 
@@ -25,7 +25,9 @@ REGRA DE USO
   com uma linha a dizer porquê.
 - **Nenhum valor aqui se muda para "fazer o teste passar".**
 
-ESTADO TRAVADO (12 jul 2026, com a bola a thr=0.4)
+⛔ O ESTADO TRAVADO **NÃO SE ESCREVE AQUI EM PROSA** — está no dict TRAVADO, em baixo, que é
+   o que o teste LÊ. Um número escrito num docstring apodrece; um número que CORRE, não.
+   (Este cabeçalho dizia "12 jul" muito depois de o estado ter mudado duas vezes.)
 """
 import sys, json, pickle
 import numpy as np

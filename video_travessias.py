@@ -2,7 +2,9 @@
 """
 O VÍDEO das travessias — pontos 10 e 11 (os frágeis).  *** SÓ LÊ. Não altera nada. ***
 
-O Vasco vê com os olhos dele. Os números dizem 96,3 e escondem isto.
+O Vasco vê com os olhos dele. Os números escondem isto.
+(⚠️ script de DIAGNÓSTICO, escrito a 13 jul quando o estado era 96,3/95,9. NÃO é o estado atual
+ — esse sai de `python3 teste_regressao.py`.)
 
 O QUE ESTÁ DESENHADO:
   🟡 linha amarela .... a REDE (base), da calibração
