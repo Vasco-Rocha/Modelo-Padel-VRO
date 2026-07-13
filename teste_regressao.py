@@ -139,7 +139,8 @@ TRAVADO = {
 # As REGRAS que produzem estes números. Cada uma já valeu pontos, medidos.
 # (Se uma destas desaparecer do pipeline, os números caem e o teste falha.)
 REGRAS_VIVAS = """
-  B8/vai-e-vem      A->B longe, A->C perto => B e' ERRO. Tira o frame, nao parte a cadeia. (+6 precisao)
+  B14/vai-e-vem     A->B longe, A->C perto => B e' ERRO. Tira o frame, nao parte a cadeia.
+                    (era "B8" ate 13 jul — a B8 REAL e' outra regra: coerencia temporal.)
   Theta/costura     Direcao a 2 graus, numa UNICA detecao => os buracos deixam de partir.  (+10 recall)
   cruzamento fundo  De fundo a fundo. Rocar a fita NAO conta (e' onde o ruido oscila).
   S15 mao/raquete   L: servico 17,4 · passagem a mao 2,7. So dispara se veio da RAQUETE.  (+18 precisao)

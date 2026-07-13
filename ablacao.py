@@ -21,7 +21,7 @@ BASE: 15 pontos · RECALL 93,2% · PRECISÃO 89,4% · 12/12 serviços
   pancadas (S12)            +4,5     -13,6     🥉
   S16 INVERTIDA             -0,3     -12,1     inverter custa 12 pontos. NÃO INVERTER.
   cruzamento profundo        0,0      -6,8     vale
-  vai-e-vem (B8)            -0,7      -0,1     ⚠️ ver abaixo
+  vai-e-vem (B14)            -0,7      -0,1     ⚠️ ver abaixo
   min_det (tracklets)        0,0       0,0     ⚠️ NÃO FAZ NADA
 
 AS DUAS DESCOBERTAS
@@ -107,7 +107,7 @@ TESTES = [
     ("S17 REDE  🔒",           dict(flags={"S17_REDE": False})),
     ("S18 mao parada",         dict(flags={"S18_MAO_PARADA": False})),
     ("cruzamento profundo",    dict(over=dict(MIN_PROF=0.0))),
-    ("vai-e-vem (B8)",         dict(sem={"vai_e_vem"})),
+    ("vai-e-vem (B14)",         dict(sem={"vai_e_vem"})),
     ("min_det (tracklets)",    dict(over=dict(MIN_DET=1))),
     ("PAUSA MINIMA (prompts)",  dict(flags={"PAUSA_MINIMA": False})),
     # 🔴 S23 — o QUIQUE DO SERVIÇO (Vasco, 13 jul). Anda JUNTA com o MIN_PROF=0.15:

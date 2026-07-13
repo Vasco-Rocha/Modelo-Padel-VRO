@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """
-PIPELINE COMPLETO DO M1 — TEMPO ÚTIL.       12 jul 2026.
+PIPELINE COMPLETO DO M1 — TEMPO ÚTIL.
 
-    RECALL 93,2%   PRECISÃO 89,4%      (de manhã estava em 72% / 63%)
+⛔ NÃO ESCREVER O ESTADO AQUI. Um número escrito num docstring APODRECE — e depois MENTE.
+   (Este cabeçalho dizia "RECALL 93,2 / PRECISÃO 89,4" e "MIN_PROF=0.35" **muito depois de ser
+    falso**. É a doença: um ficheiro a mentir sobre si próprio, na primeira linha que se lê.)
+
+   👉 O ESTADO ESTÁ AQUI, e é a única fonte:   python3 teste_regressao.py
 
 Corre em CPU, em segundos. Sem GPU, sem Colab, sem Kaggle.
 
-    python3 gerar_tempo_util.py                # só as métricas
+    python3 gerar_tempo_util.py                # as métricas
     python3 gerar_tempo_util.py --video        # + a compilação do tempo útil
+    python3 gerar_tempo_util.py --dados barbosa   # o 2.º vídeo
+    python3 verificar_fonte.py                 # 🐕 o guarda: regras vs código
 
-TODAS as regras aqui são do Vasco. Ver REGRAS_DO_VASCO.md.
+TODAS as regras aqui são do Vasco. A FONTE ÚNICA: REGRAS_DO_VASCO.md (117 regras).
 
-⚠️ ATALHOS POR CORRIGIR (declarados, como manda a regra):
-   - VMAX=90 px/frame -> PÍXEIS ABSOLUTOS. Viola a lição da perspetiva (o meio-campo longe
-     tem 100 px e o perto 290, para os mesmos 6,95 m). Devia ser fração do meio_campo_px.
-   - L_RAQUETE=11, SILENCIO=4s, PAD_ANTES=1.6s, MIN_PROF=0.35, e os números da pancada:
-     afinados ao F1 DESTE vídeo. Não derivados da estrutura. Podem não sobreviver a outra câmara.
+⚠️ ATALHOS DECLARADOS (como manda a regra dele — os AJUSTES, que o 2.º vídeo vai testar):
+   L_RAQUETE · SILENCIO · PAD_ANTES · MIN_PROF · PAN_DTHETA · PAN_L · QUIQUE_PROF · QUIQUE_JANELA
+   Afinados ao F1 DESTE vídeo — **não derivados da estrutura**. Podem não sobreviver a outra câmara.
+   ⚖️ As LEIS do Vasco sobrevivem. Os AJUSTES do Claude partem. Nunca com o mesmo estatuto.
+   (Os valores estão ao pé de cada um, com o porquê. **Não os repetir aqui** — apodrecem.)
 """
 import csv, json, math, sys, subprocess, os, pickle
 import numpy as np
@@ -423,7 +429,8 @@ def fim_certo(R, cal, boxes):
 
 
 def vai_e_vem(R):
-    """S/B8 — A->B longe, A->C perto  =>  B é ERRO. Tira o frame, não parte a cadeia."""
+    """B14 — A->B longe, A->C perto  =>  B é ERRO. Tira o frame, não parte a cadeia.
+    ⚠️ chamava-se "B8" até 13 jul. A B8 REAL é outra regra (coerência temporal, por implementar)."""
     if not REGRAS["B14_VAI_E_VEM"]:
         return R
     fs = sorted(R)
