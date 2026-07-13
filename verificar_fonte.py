@@ -189,7 +189,15 @@ def importado(p: Path) -> bool:
 def v1_duplicados():
     print("\n① DUPLICADOS — dois ficheiros com o mesmo nome")
     por_nome = {}
-    for ext in (".md", ".py"):
+    # 🚨 13 jul (o Vasco mandou rever "a fundo"): esta lista era só (".md", ".py").
+    #    ⇒ O GUARDA NUNCA OLHOU PARA OS **DADOS**. E os dados são a coisa de que o
+    #    `teste_regressao.py` DEPENDE. Duplicar o `traj_frames...csv` ou o `player_boxes...pkl`
+    #    passava-lhe debaixo do nariz — e uma cópia velha da bola dá NÚMEROS ERRADOS EM SILÊNCIO.
+    #
+    #    >>> UM GUARDA COM UM PONTO CEGO É UM GUARDA QUE ENSINA A CONFIAR NO PONTO CEGO.
+    for ext in (".md", ".py", ".csv", ".pkl"):   # ⚠️ .json NAO: o dataset_bola_637 tem milhares
+                                                 #    e o guarda afogava-se (timeout). Estes dois sao
+                                                 #    os que o teste_regressao LE — sao os que contam.
         for p in ficheiros(ext):
             por_nome.setdefault(p.name, []).append(p)
 

@@ -28,10 +28,20 @@ import numpy as np
 
 FPS = 29.97
 N_FRAMES = 8741
-BOLA = "../dados_parada4/traj_frames_Parada4_thr04.csv"
-CAL  = "calibracao_campo.json"
-VIDEO = "../Parada4.mp4"
-BOXES = "../dados_parada4/player_boxes_parada4.pkl"
+# 🔒 OS DADOS DO ESTADO TRAVADO VIVEM **DENTRO DO REPO** (13 jul).
+#    Estavam em `../dados_parada4/` — FORA do repo. O GitHub tinha o teste, os valores travados e
+#    as 117 regras... e NÃO tinha os 1,7 MB de que o teste precisa para correr.
+#    ⇒ um clone do GitHub dava FileNotFoundError.
+#
+#    **UM ESTADO TRAVADO QUE NÃO SE PODE RE-CORRER É UM NÚMERO ESCRITO NUM DOCSTRING.**
+#
+#    É a mesma doença de sempre, no próprio guarda: PARECE seguro (está commitado! está travado!)
+#    mas aquilo de que depende não está lá. Agora está: 1,7 MB, e o clone reproduz os números.
+BOLA  = "data/parada4/traj_frames_Parada4_thr04.csv"   # 0,50 MB — a bola (BlurBall, thr=0.4)
+BOXES = "data/parada4/player_boxes_parada4.pkl"        # 1,13 MB — os jogadores
+CAL   = "calibracao_campo.json"
+VIDEO = "../Parada4.mp4"      # ⚠️ o VÍDEO (89 MB) fica FORA — só é preciso para `--video`.
+                              #    O TESTE não precisa dele. O estado travado reproduz-se sem ele.
 
 # ground-truth: 13 rallies / 119,6 s, anotados à mão pelo Vasco
 # ⚠️ 13 jul: o Vasco ACRESCENTOU o 13.º (289,1s -> fim do vídeo). Faltava. O que eu chamava

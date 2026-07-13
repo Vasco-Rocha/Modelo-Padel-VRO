@@ -343,6 +343,60 @@ S11, S22, S24-S26, S29, S31-S41.)*
 
 ---
 
+---
+
+# 🩸 AS TRÊS LEIS QUE CUSTARAM MAIS CARO — **e foram as ÚLTIMAS a aprender-se**
+*(13 jul, no fim do dia, à sétima revisão. O Vasco mandou rever **sete vezes**. Cada revisão
+encontrou uma. **Nenhuma delas apareceu nos números.**)*
+
+## 1. 📄 **A VERDADE QUE SE ESCREVE APODRECE. A QUE SE CORRE, NÃO.**
+
+⛔ **NUNCA escrever o ESTADO num docstring, num comentário, num `.md` sem data.**
+Um número escrito **apodrece** — e depois **mente**, na primeira linha que toda a gente lê.
+
+**Foi apanhado em TRÊS runners ao mesmo tempo:**
+```
+gerar_tempo_util.py  →  "RECALL 93,2 / PRECISÃO 89,4" · "MIN_PROF=0.35" · "VMAX=90"
+teste_regressao.py   →  "TRAVA O ESTADO DE 12 JUL"
+ablacao.py           →  uma TABELA inteira de resultados, toda falsa
+```
+**Os três mentiam. Nenhum gritava. Porque um docstring não corre.**
+
+👉 **A regra:** um documento diz **ONDE** está a verdade — **não a repete**.
+👉 **O estado sai de:** `python3 teste_regressao.py`. Nada mais.
+*(Um `.md` DATADO — um "FECHO_13JUL" — não apodrece: é **história**, e a data diz isso.)*
+
+## 2. 🔒 **UM ESTADO TRAVADO QUE NÃO SE PODE RE-CORRER É UM NÚMERO ESCRITO NUM DOCSTRING.**
+
+O `teste_regressao.py` estava no GitHub. Os valores travados estavam no GitHub. As 117 regras
+estavam no GitHub. **E os 1,7 MB de dados de que o teste precisa, NÃO.**
+
+**Um clone dava `FileNotFoundError`.** O guarda **guardava um número que ninguém podia verificar.**
+
+👉 **A regra:** **os dados do estado travado vivem DENTRO do repo** (`data/parada4/`).
+Se um clone limpo não reproduz os números, **o estado não está travado — está AFIRMADO.**
+*(O VÍDEO fica de fora — 89 MB, e o teste não precisa dele. **Só os dados de que o teste depende.**)*
+
+## 3. 🐕 **UM GUARDA COM UM PONTO CEGO ENSINA A CONFIAR NO PONTO CEGO.**
+
+O `verificar_fonte.py` varria `.md` e `.py`. **Nunca olhou para os DADOS** — que são a única coisa
+de que o teste **depende**. Havia **três cópias** do ficheiro da bola e ninguém sabia.
+**Uma cópia velha da bola dá números errados EM SILÊNCIO.**
+
+👉 **A regra:** **o guarda tem de olhar para tudo aquilo de que o resultado depende** — o código,
+as regras, **e os DADOS**. E **tem de ser testado contra falhas reais, injetadas** *(numa cópia em
+`/tmp` — nunca no repo)*.
+> **Um guarda que nunca dispara é indistinguível de um guarda que não existe.**
+
+---
+
+> # 🏃 **E A LEI QUE AS RESUME ÀS TRÊS:**
+> # **SÓ O QUE SE CORRE É QUE CONTA.**
+> Nunca dizer *"está feito"* a partir de uma lista de ficheiros, de um mapa, de um cabeçalho, ou
+> de um número que alguém escreveu. **Correr. Ver o vídeo. Medir.**
+
+---
+
 # 📐 AS 8 LIÇÕES QUE CUSTARAM MAIS CARO   *(as que se pagaram em DIAS)*
 
 1. 🏃 **SÓ O QUE SE CORRE É QUE CONTA.** Nunca dizer *"está feito"* a partir de uma lista de ficheiros.
