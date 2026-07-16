@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}PadelPro Vision{% endblock %}</title>
+<style>
+  :root{
+    --fundo:#0e1116; --caixa:#161b22; --caixa2:#1c232c;
+    --linha:#2b3441; --texto:#e6edf3; --fraco:#8b949e;
+    --verde:#3fb950; --vermelho:#f85149; --amarelo:#d29922; --azul:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--fundo); color:var(--texto);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+    /* ── NÃO PARECER INTERNET ────────────────────────────────────────
+       Uma app nativa não deixa arrastar o texto todo com o rato, nem
+       mostra o menu de "Ver código-fonte". Isto tira as duas coisas. */
+    -webkit-user-select:none; user-select:none;
+    cursor:default;
+    overscroll-behavior:none;          /* sem o "elástico" do scroll da web */
+  }
+  /* o que É para copiar, copia-se: números, nomes de ficheiro, código */
+  code,.mono,input,#agora{-webkit-user-select:text; user-select:text}
+
+  /* Links: sem azul, sem sublinhado. Um link numa app é só... texto no qual se clica. */
+  a{color:inherit; text-decoration:none; cursor:default}
+  a:hover{text-decoration:none}
+  a.link{color:var(--azul)}
+  a.link:hover{opacity:.8}
+
+  .wrap{max-width:1000px; margin:0 auto; padding:28px 20px 80px}
+
+  header{border-bottom:1px solid var(--linha); padding-bottom:16px; margin-bottom:24px}
+  h1{margin:0; font-size:21px; letter-spacing:-.2px}
+  h1 .sub{color:var(--fraco); font-weight:400; font-size:14px; margin-left:8px}
+  .voltar{font-size:13px; color:var(--fraco); display:inline-block; margin-bottom:10px}
+  .voltar:hover{color:var(--texto)}
+
+  .aviso{
+    background:rgba(210,153,34,.08); border:1px solid rgba(210,153,34,.4);
+    border-left:3px solid var(--amarelo);
+    padding:12px 14px; border-radius:6px; margin:16px 0; font-size:13.5px;
+  }
+  .aviso b{color:var(--amarelo)}
+
+  .btn{
+    display:inline-block; padding:8px 14px; border-radius:6px; border:1px solid var(--linha);
+    background:var(--caixa2); color:var(--texto); font-size:13.5px; cursor:default;
+    font-family:inherit; -webkit-user-select:none; user-select:none;
+  }
+  .btn:active{transform:translateY(1px)}   /* carrega como um botão a sério */
+  .btn:hover{background:#26313d; text-decoration:none}
+  .btn.primario{background:#1f6feb; border-color:#1f6feb; color:#fff}
+  .btn.primario:hover{background:#2a7cf7}
+  .btn.perigo{background:rgba(248,81,73,.12); border-color:rgba(248,81,73,.5); color:#ff9d97}
+  .btn:disabled{opacity:.35; cursor:not-allowed}
+
+  code,.mono{font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:12.5px}
+  .fraco{color:var(--fraco)}
+  footer{margin-top:48px; padding-top:16px; border-top:1px solid var(--linha);
+         color:var(--fraco); font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  {% block corpo %}{% endblock %}
+
+  <footer>
+    🎾 <b>PadelPro Vision</b> — a bancada.
+    Esta app <b>lê e corre</b>. <b>Nunca edita o pipeline.</b>
+    O estado do modelo não está escrito aqui — sai de <code>python3 teste_regressao.py</code>.
+  </footer>
+</div>
+
+<script>
+  // Menu do botão direito ("Ver código-fonte", "Recarregar") — é o que
+  // mais denuncia um browser. Fora. (O ⌘R continua a funcionar.)
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  // Arrastar uma imagem para fora da janela: coisa de página web. Fora.
+  document.addEventListener('dragstart', e => {
+    if (e.target.tagName === 'IMG') e.preventDefault();
+  });
+</script>
+</body>
+</html>

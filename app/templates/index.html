@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block titulo %}PadelPro Vision — os vídeos{% endblock %}
+
+{% block corpo %}
+<header style="display:flex; align-items:center; gap:14px">
+  <h1 style="flex:1">🎾 PadelPro Vision <span class="sub">a bancada</span></h1>
+  <a class="btn primario" href="/painel">🏃 Correr</a>
+</header>
+
+<!-- ARRASTAR — a JANELA TODA é zona de largada ─────────────────────
+     (antes só a caixa tracejada era. Largavas 5 px ao lado e o Chrome
+      abria o vídeo, tirando-te da app. Agora vale em qualquer sítio.) -->
+<div id="cortina" style="position:fixed; inset:0; z-index:99; display:none;
+     background:rgba(88,166,255,.10); backdrop-filter:blur(2px);
+     border:3px dashed var(--azul); align-items:center; justify-content:center;
+     font-size:26px; font-weight:600; color:var(--azul); pointer-events:none">
+  ⬇ &nbsp;Larga o vídeo
+</div>
+
+<div id="zona" style="border:2px dashed var(--linha); border-radius:10px; padding:22px;
+     text-align:center; color:var(--fraco); margin-bottom:8px; transition:.15s">
+  <div style="font-size:15px">
+    <b style="color:var(--texto)">Arrasta um vídeo para a janela</b> &nbsp;·&nbsp;
+    ou <a class="link" href="#" onclick="ficheiro.click();return false">escolhe um ficheiro</a>
+  </div>
+  <div style="font-size:12.5px; margin-top:6px">
+    Já está na pasta? → <a class="link" href="/">Atualizar</a>
+  </div>
+  <input type="file" id="ficheiro" accept="video/mp4" hidden>
+
+  <!-- ── O CAMINHO SEM ARRASTAR ─────────────────────────────────────
+       Um vídeo de 543 MB "enviado" pelo browser é uma CÓPIA de um
+       ficheiro que já está no MESMO DISCO. É lento e é parvo.
+       Colar o caminho é INSTANTÂNEO (hard link) e nunca falha. -->
+  <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--linha)">
+    <div style="font-size:12.5px; margin-bottom:8px">
+      Não consegues arrastar? <b style="color:var(--texto)">Cola o caminho do ficheiro.</b>
+      <span class="fraco">No Finder: clica no vídeo e faz <code>⌥⌘C</code></span>
+    </div>
+    <div style="display:flex; gap:7px; justify-content:center">
+      <input id="caminho" type="text" class="mono" placeholder="/Users/… /JogoNovo.mp4"
+             style="flex:1; max-width:460px; padding:8px 10px; background:var(--fundo);
+                    color:var(--texto); border:1px solid var(--linha); border-radius:6px;
+                    font-size:12.5px">
+      <button class="btn" onclick="porCaminho()">Adicionar</button>
+    </div>
+  </div>
+
+  <div id="barra" style="display:none; margin-top:14px">
+    <div style="height:6px; background:var(--linha); border-radius:3px; overflow:hidden">
+      <div id="prog" style="height:100%; width:0%; background:var(--azul); transition:.2s"></div>
+    </div>
+    <div id="pct" class="mono" style="margin-top:6px; font-size:12px">0%</div>
+  </div>
+  <div id="msg" style="margin-top:12px"></div>
+</div>
+
+<p class="fraco" style="font-size:12.5px; margin:10px 0 26px">
+  <b>{{ n_prontos }}</b> prontos · <b>{{ n_bloqueados }}</b> sem calibração ·
+  pasta <code>{{ pasta }}</code>
+</p>
+
+<!-- A LEI ────────────────────────────────────────────────────────── -->
+<div class="aviso">
+  <b>⚠️ Correr o M1 precisa de QUATRO coisas — a calibração é só uma.</b><br>
+  <b>campo</b> (C1: à mão, sempre) · <b>bola</b> (o BlurBall já correu?) ·
+  <b>jogadores</b> (o YOLO já correu?) · <b>runner</b> (quem aponta o pipeline a este vídeo).<br>
+  <span class="fraco">Falta uma → <b>não há botão</b>. Um botão que promete e rebenta é pior que não haver botão.</span>
+</div>
+
+{% macro cartao(v) %}
+<div style="display:flex; align-items:center; gap:14px; padding:13px 14px; margin-bottom:7px;
+     background:var(--caixa); border:1px solid var(--linha); border-radius:8px;
+     border-left:3px solid {{ 'var(--verde)' if v.pode_correr else 'var(--vermelho)' }}">
+
+  <div style="flex:1; min-width:0">
+    <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+      {{ '✅' if v.pode_correr else '⛔' }} {{ v.nome }}
+    </div>
+    <div class="mono fraco" style="margin-top:4px; font-size:12px">
+      {{ v.mb }} MB ·
+      <span style="color:{{ 'var(--verde)' if v.calibrado else 'var(--vermelho)' }}">campo</span> ·
+      <span style="color:{{ 'var(--verde)' if v.bola else 'var(--vermelho)' }}">bola</span> ·
+      <span style="color:{{ 'var(--verde)' if v.boxes else 'var(--vermelho)' }}">jogadores</span> ·
+      <span style="color:{{ 'var(--verde)' if v.runner else 'var(--vermelho)' }}">runner</span>
+      {% if v.gt %} · <span style="color:var(--verde)">GT</span>{% endif %}
+    </div>
+    {% if v.faltam %}
+    <div style="margin-top:4px; font-size:12px; color:var(--vermelho)">
+      falta: {{ v.faltam|join(' · ') }}
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="display:flex; gap:7px; flex-shrink:0">
+    {% if not v.derivado %}
+      <a class="btn primario" href="/jogo/{{ v.nome }}">📋 Ficha</a>
+    {% endif %}
+    <a class="btn" href="/ver/{{ v.nome }}">▶ Ver</a>
+    {% if not v.pode_correr and not v.calibrado %}
+      <a class="btn" href="/calibrar/{{ v.nome }}">📐 Calibrar</a>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+<!-- OS JOGOS ─────────────────────────────────────────────────────── -->
+<h2 style="font-size:14px; margin:26px 0 12px; color:var(--fraco); letter-spacing:.3px">
+  OS JOGOS
+</h2>
+{% for v in videos if not v.derivado %}{{ cartao(v) }}{% endfor %}
+
+<!-- AS SAÍDAS DO MODELO ──────────────────────────────────────────── -->
+<details style="margin-top:26px">
+  <summary style="font-size:14px; color:var(--fraco); letter-spacing:.3px; cursor:default; padding:6px 0">
+    SAÍDAS DO MODELO — {{ videos|selectattr('derivado')|list|length }} vídeos
+    <span class="fraco" style="font-weight:400">(o próprio modelo produziu-os. Correr o M1 num deles não quer dizer nada.)</span>
+  </summary>
+  <div style="margin-top:12px">
+    {% for v in videos if v.derivado %}{{ cartao(v) }}{% endfor %}
+  </div>
+</details>
+
+<script>
+const ficheiro = document.getElementById('ficheiro');
+const cortina  = document.getElementById('cortina');
+const barra = document.getElementById('barra');
+const prog  = document.getElementById('prog');
+const pct   = document.getElementById('pct');
+const msg   = document.getElementById('msg');
+
+// ── A JANELA TODA é a zona de largada ─────────────────────────────────
+// 🔑 O `preventDefault` no dragover é OBRIGATÓRIO. Sem ele o browser
+//    recusa a largada e ABRE o ficheiro — que era o bug: largavas ao
+//    lado da caixa e o Chrome trocava a app pelo vídeo.
+let contador = 0;   // dragenter/dragleave disparam nos FILHOS também.
+                    // Sem contar, a cortina pisca e desaparece a meio.
+
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  contador++;
+  cortina.style.display = 'flex';
+});
+window.addEventListener('dragover', e => { e.preventDefault(); });
+window.addEventListener('dragleave', e => {
+  e.preventDefault();
+  if (--contador <= 0) { contador = 0; cortina.style.display = 'none'; }
+});
+window.addEventListener('drop', e => {
+  e.preventDefault();                       // ⛔ nunca navegar para o ficheiro
+  contador = 0; cortina.style.display = 'none';
+  const f = e.dataTransfer.files[0];
+  if (f) enviar(f);
+});
+
+ficheiro.addEventListener('change', () => { if (ficheiro.files[0]) enviar(ficheiro.files[0]); });
+
+// ── Sem arrastar: colar o caminho ─────────────────────────────────────
+async function porCaminho() {
+  const c = document.getElementById('caminho').value.trim();
+  if (!c) return;
+  msg.innerHTML = '<span class="fraco">a adicionar…</span>';
+  const r = await (await fetch('/adicionar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({caminho: c})
+  })).json();
+  if (!r.ok) { msg.innerHTML = '<span style="color:var(--vermelho)">' + r.erro + '</span>'; return; }
+  mostrarResultado(r);
+}
+document.getElementById('caminho').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); porCaminho(); }
+});
+
+function enviar(f) {
+  if (!f.name.toLowerCase().endsWith('.mp4')) { msg.innerHTML = '<span style="color:var(--vermelho)">Só .mp4 por agora.</span>'; return; }
+  const fd = new FormData(); fd.append('video', f);
+  const x = new XMLHttpRequest();
+  barra.style.display = 'block';
+  msg.innerHTML = '<span class="fraco">a enviar <b>' + f.name + '</b> (' + Math.round(f.size/1e6) + ' MB)…</span>';
+
+  x.upload.onprogress = e => {
+    if (!e.lengthComputable) return;
+    const p = Math.round(e.loaded / e.total * 100);
+    prog.style.width = p + '%'; pct.textContent = p + '%';
+  };
+  x.onload = () => {
+    barra.style.display = 'none';
+    const r = JSON.parse(x.responseText);
+    if (!r.ok) { msg.innerHTML = '<span style="color:var(--vermelho)">' + r.erro + '</span>'; return; }
+    mostrarResultado(r);
+  };
+  x.onerror = () => { barra.style.display='none'; msg.innerHTML = '<span style="color:var(--vermelho)">Falhou o envio.</span>'; };
+  x.open('POST', '/upload');
+  x.send(fd);
+}
+
+// ⚠️ O aviso da calibração é dado NO MOMENTO em que o vídeo entra.
+//    Não à espera que ele repare sozinho.
+function mostrarResultado(r) {
+  msg.innerHTML =
+    '<div style="color:var(--verde)">✅ <b>' + r.nome + '</b> ' + (r.como || 'recebido') + '.</div>' +
+    (r.calibrado
+      ? '<div style="margin-top:8px; color:var(--verde)">✅ Já tem calibração.</div>' +
+        '<a class="btn" style="margin-top:10px" href="/">Ver na lista</a>'
+      : '<div style="margin-top:10px; color:var(--amarelo)">⛔ <b>Não tem calibração — não pode correr.</b></div>' +
+        '<a class="btn primario" style="margin-top:10px" href="' + r.proximo + '">📐 Calibrar agora</a>');
+}
+</script>
+{% endblock %}

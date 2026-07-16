@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titulo %}Calibrar — {{ nome }}{% endblock %}
+
+{% block corpo %}
+<a class="voltar" href="/">← todos os vídeos</a>
+<header>
+  <h1>📐 Calibrar <span class="sub">{{ nome }}</span></h1>
+</header>
+
+{% if ja_calibrado %}
+<div class="aviso" style="border-left-color:var(--verde); background:rgba(63,185,80,.07);
+     border-color:rgba(63,185,80,.35)">
+  <b style="color:var(--verde)">✅ Este vídeo JÁ está calibrado.</b><br>
+  Só recalibra se souberes porquê. E se recalibrares o <code>Parada4</code>,
+  <b>partes o <code>teste_regressao.py</code></b> — ele é a base do estado travado.
+</div>
+{% endif %}
+
+<div class="aviso">
+  <b>⛔ NÃO AUTO-DETETAR.</b> Já foi tentado: a auto-deteção pôs a linha de serviço
+  <b>40 px ao lado</b>. A calibração é <b>à mão</b>. É a régua de tudo o que vem a seguir —
+  e um erro aqui <b>não dá erro</b>: dá <b>números errados em silêncio</b>.
+</div>
+
+<!-- 1 ─────────────────────────────────────────────────────────────── -->
+<div style="background:var(--caixa); border:1px solid var(--linha); border-radius:8px;
+     padding:18px; margin-bottom:14px">
+  <b>1 · O frame</b>
+  <p class="fraco" style="margin:8px 0 14px; font-size:13.5px">
+    Um frame limpo deste vídeo — é sobre ele que vais marcar as linhas.
+  </p>
+  {% if tem_ffmpeg %}
+    <img src="/frame/{{ nome }}" alt="frame" style="width:100%; border-radius:6px;
+         border:1px solid var(--linha); background:#000">
+    <a class="btn" style="margin-top:12px" href="/frame/{{ nome }}" download="frame_{{ slug }}.png">
+      ⬇ Guardar o frame
+    </a>
+  {% else %}
+    <div style="color:var(--vermelho)">
+      ⚠️ Não encontrei o <code>ffmpeg</code>. Sem ele não consigo extrair o frame.<br>
+      <span class="fraco">Instala com: <code>brew install ffmpeg</code></span>
+    </div>
+  {% endif %}
+</div>
+
+<!-- 2 ─────────────────────────────────────────────────────────────── -->
+<div style="background:var(--caixa); border:1px solid var(--linha); border-radius:8px;
+     padding:18px; margin-bottom:14px">
+  <b>2 · Marcar as linhas</b>
+  <p class="fraco" style="margin:8px 0 14px; font-size:13.5px">
+    Abre o <code>calibrar_campo.html</code> que já tens e carrega lá este frame.
+    <b>É a mesma ferramenta de sempre</b> — não inventei nada nova.
+  </p>
+  <div class="mono" style="background:var(--fundo); border:1px solid var(--linha);
+       border-radius:6px; padding:12px; font-size:12.5px; line-height:1.9; color:var(--fraco)">
+    <b style="color:var(--texto)">C9</b> · ✏️ anota <b>POLILINHAS</b>, não pontos — <i>"os cantos desaparecem; as linhas não"</i><br>
+    <b style="color:var(--texto)">C2</b> · a <b>malha 2/3 NUNCA se deteta</b> — não é linha branca. <b>Desenha-se sempre.</b><br>
+    <b style="color:var(--texto)">C3</b> · a <b>central CALCULA-SE</b> (pontos médios das linhas de serviço + base da rede). <b>Não se marca.</b><br>
+    <b style="color:var(--texto)">C4</b> · descarta os cantos que <b>tocam a borda do frame</b> — a borda não é o vidro<br>
+    <b style="color:var(--texto)">C5</b> · <b>3 pontos = curvatura · 2 pontos = herdam-na.</b> A lente curva as linhas.<br>
+    <b style="color:var(--texto)">C10</b> · 🔭 a <b>distorção de lente NÃO é opcional</b><br>
+    <b style="color:var(--texto)">J15</b> · 🔲 o <b>polígono desenha-se LARGO</b> — <b>inclui os espaços laterais.</b> O <b>jogo exterior é LEGAL.</b>
+  </div>
+</div>
+
+<!-- 3 ─────────────────────────────────────────────────────────────── -->
+<div style="background:var(--caixa); border:1px solid var(--linha); border-radius:8px;
+     padding:18px">
+  <b>3 · Guardar</b>
+  <p class="fraco" style="margin:8px 0 14px; font-size:13.5px">
+    O <code>calibrar_campo.html</code> descarrega um JSON. Põe-no em
+    <code>padelpro-vision/</code> com <b>exatamente</b> este nome:
+  </p>
+  <div class="mono" style="background:var(--fundo); border:1px solid var(--linha);
+       border-radius:6px; padding:12px; font-size:13px">
+    calibracao_<b style="color:var(--azul)">{{ slug }}</b>.json<br>
+    poligono_<b style="color:var(--azul)">{{ slug }}</b>.json <span class="fraco">&nbsp;(o polígono dos jogadores)</span>
+  </div>
+  <div class="aviso" style="margin-top:14px">
+    ⚠️ <b>Ficheiro NOVO.</b> <b>Nunca escrever por cima da calibração do Parada4</b> —
+    ela é a base do <code>teste_regressao.py</code>. A calibração é <b>POR VÍDEO</b>.
+  </div>
+  <a class="btn primario" style="margin-top:14px" href="/">
+    ✓ Já guardei — voltar e verificar
+  </a>
+</div>
+{% endblock %}

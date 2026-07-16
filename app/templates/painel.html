@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block titulo %}Correr{% endblock %}
+
+{% block corpo %}
+<a class="voltar" href="/">← todos os vídeos</a>
+<header>
+  <h1>🏃 Correr <span class="sub">só o que se corre é que conta</span></h1>
+</header>
+
+<div class="aviso">
+  <b>Nenhum número desta app está escrito em lado nenhum.</b>
+  Tudo o que vires aqui saiu de um <code>python3</code> que correu <b>agora</b>, à tua frente.
+  <span class="fraco">Um número escrito apodrece — e depois mente.</span>
+</div>
+
+<!-- OS TRÊS ────────────────────────────────────────────────────────── -->
+{% for chave, s in scripts.items() %}
+<div style="display:flex; align-items:center; gap:14px; padding:14px; margin-bottom:8px;
+     background:var(--caixa); border:1px solid var(--linha); border-radius:8px">
+  <div style="flex:1; min-width:0">
+    <div style="font-weight:600">{{ s.nome }} <span class="mono fraco" style="font-weight:400">· {{ s.cmd }}</span></div>
+    <div class="fraco" style="font-size:13px; margin-top:3px">{{ s.desc }}</div>
+    <div style="font-size:12.5px; margin-top:4px; color:var(--amarelo)">⚠️ {{ s.aviso }}</div>
+  </div>
+  <button class="btn primario" onclick="correr('/correr/{{ chave }}', '{{ s.nome }}')">▶ Correr</button>
+</div>
+{% endfor %}
+
+<!-- O M1, POR VÍDEO ────────────────────────────────────────────────── -->
+<h2 style="font-size:15px; margin:30px 0 12px; color:var(--fraco); letter-spacing:.3px">
+  M1 · TEMPO ÚTIL — por vídeo
+</h2>
+
+{% for v in jogos %}
+<div style="padding:14px; margin-bottom:8px; background:var(--caixa);
+     border:1px solid var(--linha); border-left:3px solid var(--verde); border-radius:8px">
+  <div style="display:flex; align-items:center; gap:14px">
+    <div style="flex:1; min-width:0">
+      <div style="font-weight:600">✅ {{ v.nome }}</div>
+      <div class="mono fraco" style="font-size:12px; margin-top:4px; line-height:1.7">
+        campo &nbsp;<span style="color:var(--verde)">{{ v.calib }}</span><br>
+        bola &nbsp;&nbsp;<span style="color:var(--verde)">{{ v.bola }}</span><br>
+        jogad. <span style="color:var(--verde)">{{ v.boxes }}</span><br>
+        runner <span style="color:var(--azul)">{{ v.runner }}</span>
+        {% if v.gt %}<br>GT &nbsp;&nbsp;&nbsp;<span style="color:var(--verde)">sim → sai recall/precisão</span>
+        {% else %}<br>GT &nbsp;&nbsp;&nbsp;<span style="color:var(--amarelo)">não → só segmentos, SEM recall/precisão</span>{% endif %}
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:7px; flex-shrink:0">
+      <button class="btn primario" onclick="correr('/correr_m1/{{ v.nome }}', 'M1 · {{ v.nome }}')">▶ Correr M1</button>
+      <button class="btn" onclick="correr('/correr_m1/{{ v.nome }}?video=1', 'M1 + vídeo · {{ v.nome }}')">🎬 + gerar vídeo</button>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<p class="fraco" style="font-size:12.5px; margin-top:10px">
+  🎬 <b>Vídeo antes de métricas.</b> Os números escondem os bugs — tu encontraste-os todos a olhar.
+</p>
+
+<!-- O QUE NÃO CORRE ────────────────────────────────────────────────── -->
+<div style="margin-top:30px; padding:16px; background:var(--caixa); border:1px solid var(--linha);
+     border-radius:8px">
+  <b style="font-size:13px; letter-spacing:.4px; color:var(--fraco)">O QUE NÃO CORRE — e por isso não tem botão</b>
+  <div style="margin-top:10px; color:var(--fraco); font-size:13.5px; line-height:1.9">
+    ⬜ <b>M2</b> (fases) — vive em <code>geometria_fases.py</code>, fora do pipeline. <b>Não corre.</b><br>
+    ⬜ <b>M3</b> (serviço) — a S23 dá 13/13 candidatos, mas não há pipeline. <b>Não corre.</b><br>
+    ⬜ <b>M4</b> (as 3 últimas pancadas) — por fazer.<br>
+    <span style="color:var(--amarelo)">Um botão para eles seria um botão que mente.</span>
+  </div>
+</div>
+
+<!-- A CONSOLA ──────────────────────────────────────────────────────── -->
+<div id="consola" style="display:none; margin-top:26px">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+    <b id="titulo" style="flex:1"></b>
+    <span id="pulso" class="mono" style="color:var(--azul); font-size:12.5px"></span>
+    <button class="btn" onclick="fechar()">Fechar</button>
+  </div>
+  <pre id="saida" class="mono" style="margin:0; padding:16px; background:#080a0d;
+       border:1px solid var(--linha); border-radius:8px; max-height:520px; overflow:auto;
+       white-space:pre-wrap; word-break:break-word; font-size:12.5px; line-height:1.6;
+       -webkit-user-select:text; user-select:text"></pre>
+</div>
+
+<script>
+let fonte = null;
+const consola = document.getElementById('consola');
+const saida   = document.getElementById('saida');
+const titulo  = document.getElementById('titulo');
+const pulso   = document.getElementById('pulso');
+
+function correr(url, nome) {
+  if (fonte) fonte.close();
+  consola.style.display = 'block';
+  titulo.textContent = nome;
+  saida.textContent  = '';
+  const t0 = Date.now();
+  const tick = setInterval(() => {
+    pulso.textContent = '● a correr… ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s';
+  }, 100);
+
+  fonte = new EventSource(url);
+  fonte.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.fim) {
+      clearInterval(tick);
+      pulso.textContent = '';
+      fonte.close(); fonte = null;
+      return;
+    }
+    saida.textContent += d.l + '\n';
+    saida.scrollTop = saida.scrollHeight;     // segue a saída, como um terminal
+  };
+  fonte.onerror = () => {
+    clearInterval(tick); pulso.textContent = '';
+    if (fonte) { fonte.close(); fonte = null; }
+  };
+  consola.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function fechar() {
+  if (fonte) { fonte.close(); fonte = null; }
+  consola.style.display = 'none';
+}
+</script>
+{% endblock %}

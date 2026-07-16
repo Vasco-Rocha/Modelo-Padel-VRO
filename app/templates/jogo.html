@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block titulo %}{{ nome }}{% endblock %}
+
+{% block corpo %}
+<a class="voltar" href="/">← todos os vídeos</a>
+
+<!-- CABEÇALHO: AS DUPLAS ───────────────────────────────────────────── -->
+<header style="border-bottom:1px solid var(--linha); padding-bottom:18px; margin-bottom:0">
+  <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+    <div style="flex:1; min-width:200px">
+      <div class="mono fraco" style="font-size:11px; letter-spacing:.5px">DUPLA A</div>
+      <div style="font-size:19px; font-weight:600">
+        {{ (ficha.duplaA[0] or '—') }} <span class="fraco" style="font-weight:400">/</span> {{ (ficha.duplaA[1] or '—') }}
+      </div>
+    </div>
+    <div class="fraco" style="font-size:15px">vs</div>
+    <div style="flex:1; min-width:200px">
+      <div class="mono fraco" style="font-size:11px; letter-spacing:.5px">DUPLA B</div>
+      <div style="font-size:19px; font-weight:600">
+        {{ (ficha.duplaB[0] or '—') }} <span class="fraco" style="font-weight:400">/</span> {{ (ficha.duplaB[1] or '—') }}
+      </div>
+    </div>
+    <button class="btn" onclick="abrirEditar()">✎ editar</button>
+  </div>
+  <div class="mono fraco" style="font-size:12px; margin-top:8px">
+    🎾 {{ nome }}
+    {% if ficha.data %} · {{ ficha.data }}{% endif %}
+    {% if ficha.local %} · {{ ficha.local }}{% endif %}
+    {% if ficha.resultado %} · <b style="color:var(--texto)">{{ ficha.resultado }}</b>{% endif %}
+  </div>
+</header>
+
+<!-- EDITOR DA FICHA (escondido) ─────────────────────────────────────── -->
+<div id="editar" style="display:none; margin-top:16px; padding:16px; background:var(--caixa);
+     border:1px solid var(--linha); border-radius:8px">
+  <div class="aviso" style="margin-top:0">
+    ⚠️ <b>O modelo não sabe os nomes.</b> A regra da cor da roupa não corre — escreve-os tu.
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+    <div>
+      <div class="mono fraco" style="font-size:11px; margin-bottom:4px">DUPLA A</div>
+      <input id="eA0" class="campo" placeholder="jogador 1" value="{{ ficha.duplaA[0] }}">
+      <input id="eA1" class="campo" placeholder="jogador 2" value="{{ ficha.duplaA[1] }}" style="margin-top:6px">
+    </div>
+    <div>
+      <div class="mono fraco" style="font-size:11px; margin-bottom:4px">DUPLA B</div>
+      <input id="eB0" class="campo" placeholder="jogador 1" value="{{ ficha.duplaB[0] }}">
+      <input id="eB1" class="campo" placeholder="jogador 2" value="{{ ficha.duplaB[1] }}" style="margin-top:6px">
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px">
+    <input id="eData"  class="campo" placeholder="data" value="{{ ficha.data }}">
+    <input id="eLocal" class="campo" placeholder="local" value="{{ ficha.local }}">
+    <input id="eRes"   class="campo" placeholder="resultado" value="{{ ficha.resultado }}">
+  </div>
+  <div style="margin-top:12px; display:flex; gap:8px">
+    <button class="btn primario" onclick="guardarFicha()">Guardar</button>
+    <button class="btn" onclick="document.getElementById('editar').style.display='none'">Cancelar</button>
+  </div>
+</div>
+
+<!-- ABAS ───────────────────────────────────────────────────────────── -->
+<div style="display:flex; gap:2px; margin:24px 0 0; border-bottom:1px solid var(--linha); flex-wrap:wrap">
+  <button class="aba ativa" data-aba="tu"    onclick="aba('tu')">⏱️ Tempo útil</button>
+  <button class="aba"       data-aba="fases" onclick="aba('fases')">🎯 Análise por Fases</button>
+  <button class="aba"       data-aba="rel"   onclick="aba('rel')">📄 Relatório</button>
+  <button class="aba"       data-aba="bruto" onclick="aba('bruto')">▶ Jogo em bruto</button>
+</div>
+
+<!-- ═══ ABA 1 · TEMPO ÚTIL (M1) ═══════════════════════════════════════ -->
+<div class="painel-aba" id="p-tu" style="padding-top:18px">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap">
+    <b style="flex:1">⏱️ Tempo útil <span class="fraco" style="font-weight:400">— o M1</span></b>
+    {% if tem_runner_m1 %}
+      <button class="btn primario" onclick="gerar('/correr_m1/{{ nome }}?video=1', 'M1 · tempo útil')">
+        {{ '↻ Regenerar' if video_analise else '▶ Gerar tempo útil' }}
+      </button>
+    {% else %}
+      <span class="fraco" style="font-size:13px">sem runner para este jogo</span>
+    {% endif %}
+  </div>
+
+  {% if video_analise %}
+    <video src="/video_analise/{{ nome }}" controls preload="metadata"
+           style="width:100%; border-radius:8px; background:#000"></video>
+    <p class="fraco" style="font-size:12.5px; margin-top:8px">
+      🎬 Os segmentos de tempo útil, marcados. <b>Vídeo antes de métricas</b> — é aqui que se veem os bugs.
+    </p>
+  {% else %}
+    <div class="vazio">
+      Ainda não foi gerado.<br>
+      <span class="fraco">Carrega em <b>▶ Gerar tempo útil</b> — quando terminar, o vídeo fica aqui guardado.</span>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ═══ ABA 2 · ANÁLISE POR FASES (M2) ════════════════════════════════ -->
+<div class="painel-aba" id="p-fases" style="display:none; padding-top:18px">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap">
+    <b style="flex:1">🎯 Análise por Fases <span class="fraco" style="font-weight:400">— o M2 · defesa · transição · ataque</span></b>
+    <button class="btn primario" onclick="gerar('/correr_m2/{{ nome }}', 'M2 · fases')">
+      {{ '↻ Regenerar' if m2_videos else '▶ Gerar análise por fases' }}
+    </button>
+  </div>
+
+  {% if not tem_runner_m2 %}
+    <div class="aviso" style="margin-top:0">
+      ⚠️ <b>O M2 ainda está a ser feito noutra conversa.</b> O botão corre o que existe —
+      se ainda não estiver pronto, mostra o que falta, sem inventar.
+    </div>
+  {% endif %}
+
+  {% if m2_videos %}
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px">
+      {% for f in m2_videos %}
+      <button class="btn {{ 'primario' if loop.first else '' }}" data-m2="{{ f }}"
+              onclick="verM2('{{ f }}', this)">
+        {{ f.replace('M2_','').replace('_barbosa.mp4','').replace('_parada4.mp4','').replace('_',' ') }}
+      </button>
+      {% endfor %}
+    </div>
+    <video id="videoM2" src="/m2_video/{{ nome }}/{{ m2_videos[0] }}" controls preload="metadata"
+           style="width:100%; border-radius:8px; background:#000"></video>
+    <p class="fraco" style="font-size:12.5px; margin-top:8px">
+      Cada clip é um confronto de fases (ex.: <b>ATAQUE × DEFESA</b>). A fase é da <b>equipa</b>,
+      pelas costuras da parede — não pela linha de serviço.
+    </p>
+  {% else %}
+    <div class="vazio">
+      Ainda não foi gerado.<br>
+      <span class="fraco">Carrega em <b>▶ Gerar análise por fases</b>. Os clips ficam aqui guardados.</span>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ═══ ABA 3 · RELATÓRIO ═════════════════════════════════════════════ -->
+<div class="painel-aba" id="p-rel" style="display:none; padding-top:18px">
+
+  <!-- 3a · O BLOCO DE NOTAS -->
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+    <b style="flex:1">📝 Notas <span class="fraco" style="font-weight:400">— aponta enquanto vês o jogo</span></b>
+    <span id="notasEstado" class="fraco" style="font-size:12px"></span>
+  </div>
+  <textarea id="notas" class="campo mono" placeholder="ex: pt 3 — B perde o ponto no volley à rede, mal posicionados…
+pt 7 — serviço fraco do A, ficam em defesa o rally todo…"
+    style="height:200px; line-height:1.6; resize:vertical"
+    oninput="notasMudaram()">{{ ficha.notas }}</textarea>
+
+  <!-- 3b · TRANSFORMAR EM RELATÓRIO -->
+  <div style="margin-top:16px; padding:16px; background:var(--caixa); border:1px solid var(--linha); border-radius:8px">
+    <b>🤖 Transformar as notas em relatório</b>
+    <p class="fraco" style="font-size:13px; margin:8px 0 12px">
+      As notas viram um relatório HTML — <b>na conversa de IA que já usas para isto</b>.
+      O botão copia tudo (notas + duplas + contexto) pronto a colar. O HTML que recebes,
+      arrasta-o aqui em baixo.
+    </p>
+    <button class="btn primario" onclick="prepararRelatorio()">📋 Copiar para a IA</button>
+    <span id="copiado" class="fraco" style="margin-left:10px; font-size:13px"></span>
+  </div>
+
+  <!-- 3c · OS RELATÓRIOS HTML -->
+  <div style="margin-top:20px">
+    <div id="zonaRel" style="border:2px dashed var(--linha); border-radius:10px; padding:16px;
+         text-align:center; color:var(--fraco); margin-bottom:14px">
+      <b style="color:var(--texto)">Arrasta o relatório <code>.html</code> para aqui</b>
+      <div style="font-size:12.5px; margin-top:6px">
+        ou cola o caminho:
+        <input id="relPath" class="campo mono" style="width:300px; display:inline-block; margin-left:6px"
+               placeholder="/Users/…/relatorio.html">
+        <button class="btn" onclick="addPorCaminho()">Adicionar</button>
+      </div>
+      <input type="file" id="relFile" accept=".html" hidden>
+      <div id="relMsg" style="margin-top:10px"></div>
+    </div>
+
+    {% if relatorios %}
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px">
+        {% for r in relatorios %}
+        <button class="btn {{ 'primario' if loop.first else '' }}" data-rel="{{ r.ficheiro }}"
+                onclick="verRel('{{ r.ficheiro }}', this)">
+          {{ r.ficheiro }} <span class="fraco" style="font-size:11px">· {{ r.mod }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      <iframe id="frameRel" src="/relatorio/{{ slug }}/{{ relatorios[0].ficheiro }}"
+              style="width:100%; height:720px; border:1px solid var(--linha); border-radius:8px; background:#fff"></iframe>
+    {% else %}
+      <div class="vazio">
+        Nenhum relatório ainda. <span class="fraco">Escreve as notas, copia para a IA, e arrasta o HTML aqui.</span>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══ ABA 4 · JOGO EM BRUTO ═════════════════════════════════════════ -->
+<div class="painel-aba" id="p-bruto" style="display:none; padding-top:18px">
+  <video src="/video/{{ nome }}" controls preload="metadata"
+         style="width:100%; border-radius:8px; background:#000"></video>
+  <p class="fraco" style="font-size:12.5px; margin-top:8px">
+    O jogo em bruto. Para saltar ao segundo exato → <a class="link" href="/ver/{{ nome }}">abrir com controlos</a>.
+  </p>
+</div>
+
+<!-- CONSOLA (partilhada por M1 e M2) ────────────────────────────────── -->
+<div id="consola" style="display:none; margin-top:22px">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+    <b id="cTitulo" style="flex:1"></b>
+    <span id="cPulso" class="mono" style="color:var(--azul); font-size:12.5px"></span>
+    <button class="btn" onclick="fecharConsola()">Fechar</button>
+  </div>
+  <pre id="cSaida" class="mono" style="margin:0; padding:14px; background:#080a0d;
+       border:1px solid var(--linha); border-radius:8px; max-height:420px; overflow:auto;
+       white-space:pre-wrap; word-break:break-word; font-size:12.5px; line-height:1.6;
+       -webkit-user-select:text; user-select:text"></pre>
+</div>
+
+<style>
+  .campo{width:100%; padding:8px 10px; background:var(--fundo); color:var(--texto);
+         border:1px solid var(--linha); border-radius:6px; font-size:14px; font-family:inherit;
+         -webkit-user-select:text; user-select:text}
+  .aba{background:none; border:none; color:var(--fraco); padding:9px 13px; cursor:default;
+       font-size:14px; font-family:inherit; border-bottom:2px solid transparent; margin-bottom:-1px}
+  .aba.ativa{color:var(--texto); border-bottom-color:var(--azul); font-weight:600}
+  .vazio{padding:34px; text-align:center; background:var(--caixa); border:1px solid var(--linha);
+         border-radius:8px; color:var(--texto)}
+</style>
+
+<script>
+const NOME = {{ nome|tojson }};
+const SLUG = {{ slug|tojson }};
+const DUPLAS = {
+  A: {{ ficha.duplaA|tojson }}, B: {{ ficha.duplaB|tojson }},
+  data: {{ ficha.data|tojson }}, local: {{ ficha.local|tojson }}, resultado: {{ ficha.resultado|tojson }}
+};
+
+// ── abas ──────────────────────────────────────────────────────────────
+function aba(qual){
+  document.querySelectorAll('.painel-aba').forEach(p => p.style.display='none');
+  document.getElementById('p-'+qual).style.display='block';
+  document.querySelectorAll('.aba').forEach(b => b.classList.toggle('ativa', b.dataset.aba===qual));
+}
+
+// ── editar ficha ──────────────────────────────────────────────────────
+function abrirEditar(){
+  const e = document.getElementById('editar');
+  e.style.display = e.style.display==='none' ? 'block' : 'none';
+}
+async function guardarFicha(){
+  const g = id => document.getElementById(id).value.trim();
+  const r = await (await fetch(`/jogo/${encodeURIComponent(NOME)}/guardar`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ duplaA:[g('eA0'),g('eA1')], duplaB:[g('eB0'),g('eB1')],
+      data:g('eData'), local:g('eLocal'), resultado:g('eRes') })
+  })).json();
+  if(r.ok) location.reload();
+}
+
+// ── NOTAS: guardam-se sozinhas ────────────────────────────────────────
+let notasTimer = null;
+function notasMudaram(){
+  document.getElementById('notasEstado').textContent = 'a escrever…';
+  clearTimeout(notasTimer);
+  notasTimer = setTimeout(guardarNotas, 800);   // guarda 0,8s depois de parares
+}
+async function guardarNotas(){
+  const notas = document.getElementById('notas').value;
+  await fetch(`/jogo/${encodeURIComponent(NOME)}/guardar`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({notas})
+  });
+  const e = document.getElementById('notasEstado');
+  e.textContent = '✅ guardado'; setTimeout(()=>e.textContent='', 1500);
+}
+
+// ── preparar o prompt para a IA ───────────────────────────────────────
+function prepararRelatorio(){
+  const notas = document.getElementById('notas').value.trim();
+  if(!notas){ document.getElementById('copiado').textContent='escreve as notas primeiro'; return; }
+  const nomeA = DUPLAS.A.filter(Boolean).join(' / ') || 'Dupla A';
+  const nomeB = DUPLAS.B.filter(Boolean).join(' / ') || 'Dupla B';
+  const prompt =
+`Faz-me um relatório de análise de padel em HTML, no mesmo estilo do que já fizemos.
+
+JOGO: ${nomeA}  vs  ${nomeB}${DUPLAS.data?`\nDATA: ${DUPLAS.data}`:''}${DUPLAS.local?`\nLOCAL: ${DUPLAS.local}`:''}${DUPLAS.resultado?`\nRESULTADO: ${DUPLAS.resultado}`:''}
+
+AS MINHAS NOTAS (em bruto, a olhar para o jogo):
+${notas}
+
+Transforma isto num relatório HTML limpo e legível: um resumo tático, os pontos fortes e fracos
+de cada dupla, e o que trabalhar. Devolve-me só o ficheiro .html completo.`;
+  navigator.clipboard.writeText(prompt);
+  document.getElementById('copiado').textContent = '✅ copiado — cola na tua conversa de IA';
+  setTimeout(()=>document.getElementById('copiado').textContent='', 4000);
+}
+
+// ── correr M1 / M2 (consola ao vivo) ──────────────────────────────────
+let fonte = null;
+function gerar(url, titulo){
+  if(fonte) fonte.close();
+  const c = document.getElementById('consola');
+  c.style.display='block';
+  document.getElementById('cTitulo').textContent = titulo;
+  document.getElementById('cSaida').textContent = '';
+  const t0 = Date.now();
+  const tick = setInterval(()=>{ document.getElementById('cPulso').textContent =
+    '● a correr… '+((Date.now()-t0)/1000).toFixed(1)+' s'; }, 100);
+  fonte = new EventSource(url);
+  let acabou = false;
+  fonte.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if(d.fim){ clearInterval(tick); document.getElementById('cPulso').textContent='';
+      fonte.close(); fonte=null; acabou=true;
+      setTimeout(()=>location.reload(), 1200);    // recarrega → o vídeo novo aparece
+      return; }
+    const s = document.getElementById('cSaida');
+    s.textContent += d.l + '\n'; s.scrollTop = s.scrollHeight;
+  };
+  fonte.onerror = ()=>{ if(!acabou){ clearInterval(tick);
+    document.getElementById('cPulso').textContent=''; } if(fonte){fonte.close();fonte=null;} };
+  c.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function fecharConsola(){ if(fonte){fonte.close();fonte=null;} document.getElementById('consola').style.display='none'; }
+
+// ── ver clips M2 / relatórios ─────────────────────────────────────────
+function verM2(f, btn){
+  document.getElementById('videoM2').src = `/m2_video/${encodeURIComponent(NOME)}/${encodeURIComponent(f)}`;
+  document.querySelectorAll('[data-m2]').forEach(b=>b.classList.remove('primario'));
+  if(btn) btn.classList.add('primario');
+}
+function verRel(f, btn){
+  document.getElementById('frameRel').src = `/relatorio/${SLUG}/${encodeURIComponent(f)}`;
+  document.querySelectorAll('[data-rel]').forEach(b=>b.classList.remove('primario'));
+  if(btn) btn.classList.add('primario');
+}
+
+// ── adicionar relatório ───────────────────────────────────────────────
+const zonaRel = document.getElementById('zonaRel');
+const relFile = document.getElementById('relFile');
+const relMsg  = document.getElementById('relMsg');
+zonaRel.addEventListener('click', e => { if(e.target===zonaRel) relFile.click(); });
+zonaRel.addEventListener('dragover', e=>{e.preventDefault();zonaRel.style.borderColor='var(--azul)';});
+['dragleave','drop'].forEach(ev=>zonaRel.addEventListener(ev,e=>{e.preventDefault();zonaRel.style.borderColor='var(--linha)';}));
+zonaRel.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files[0]) enviarRel(e.dataTransfer.files[0]); });
+relFile.addEventListener('change', ()=>{ if(relFile.files[0]) enviarRel(relFile.files[0]); });
+function enviarRel(f){
+  if(!f.name.toLowerCase().endsWith('.html')){ relMsg.innerHTML='<span style="color:var(--vermelho)">Um relatório é um .html.</span>'; return; }
+  const fd = new FormData(); fd.append('relatorio', f); relMsg.textContent='a receber…';
+  fetch(`/jogo/${encodeURIComponent(NOME)}/relatorio`, {method:'POST', body:fd})
+    .then(r=>r.json()).then(r=>{ if(!r.ok){relMsg.innerHTML='<span style="color:var(--vermelho)">'+r.erro+'</span>';return;} location.reload(); });
+}
+async function addPorCaminho(){
+  const c = document.getElementById('relPath').value.trim(); if(!c) return;
+  const r = await (await fetch(`/jogo/${encodeURIComponent(NOME)}/relatorio`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({caminho:c})
+  })).json();
+  if(!r.ok){ relMsg.innerHTML='<span style="color:var(--vermelho)">'+r.erro+'</span>'; return; }
+  location.reload();
+}
+</script>
+{% endblock %}

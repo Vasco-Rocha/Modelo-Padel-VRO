@@ -39,16 +39,7 @@ N_FRAMES = 8741
 #    mas aquilo de que depende não está lá. Agora está: 1,7 MB, e o clone reproduz os números.
 BOLA  = "data/parada4/traj_frames_Parada4_thr04.csv"   # 0,50 MB — a bola (BlurBall, thr=0.4)
 BOXES = "data/parada4/player_boxes_parada4.pkl"        # 1,13 MB — os jogadores
-CAL   = "calibracao_parada4.json"
-# 🔴 ERA "calibracao_campo.json" até 13 jul (à noite).
-#    O `calibracao_campo.json` NÃO DIZ A QUE CAMPO PERTENCE — não tem `_video` nem `_data`.
-#    O `calibracao_parada4.json` DIZ, e tem a MESMA geometria (verificado: só diferem em
-#    `_video`, `_data` e `_nota`).  ⇒ o pipeline carregava o ANÓNIMO e o ETIQUETADO era o
-#    que NINGUÉM lia.
-#      "IDÊNTICO HOJE NÃO É UM ESTADO — É UMA CONTAGEM DECRESCENTE."
-#    Bastava alguém recalibrar um campo novo por cima do anónimo e o teste de regressão
-#    passava a medir OUTRO CAMPO — em silêncio, com os números a sair na mesma.
-#    ⚠️ A CALIBRAÇÃO É POR VÍDEO. O nome do ficheiro TEM de dizer de que vídeo é.
+CAL   = "calibracao_campo.json"
 VIDEO = "../Parada4.mp4"      # ⚠️ o VÍDEO (89 MB) fica FORA — só é preciso para `--video`.
                               #    O TESTE não precisa dele. O estado travado reproduz-se sem ele.
 
@@ -106,36 +97,9 @@ REGRAS = {
     "PAN_TEM_JOGADOR":True,   # 🆕 uma raquetada TEM de ter um jogador ao pé. Senão, ninguém bateu.
     "PAUSA_MINIMA":   True,   # 🆕 regra PERDIDA dos prompts (v7.1/v7.7/v8) — ver abaixo
     "S23_QUIQUE_SERV":True,   # 🆕🔴 O QUIQUE DO SERVIÇO. A regra do Vasco (13 jul) — ver abaixo.
-    "S43_COLA":       False,  # 🔴 A COLA (Vasco, 13 jul). "Dois pedaços só são pontos DIFERENTES
-                              #    se houver um SERVIÇO entre eles." LEI CERTA. CÓDIGO PRONTO.
-                              #    ⛔ DESLIGADA — E A RAZÃO NÃO É A REGRA, É O SINAL:
-                              #
-                              #    O detetor de serviço acerta 12/13 (92%) no Parada4 e 20/22 (91%)
-                              #    no Barbosa. O falhado do Parada4 é o PONTO 2 (1.ª pancada aos
-                              #    49,6 s, não reconhecida como serviço). A cola pergunta "este
-                              #    pedaço abre com um serviço?", ouve NÃO — e ENGOLE UM PONTO REAL.
-                              #      ligada: recall 96,8 -> 97,5 · precisão 95,4 -> 92,4
-                              #              🔴 n_pontos 13 -> 12   (fundiu o ponto 1 com o 2)
-                              #
-                              #    ⚠️ D18: "nenhuma regra pode VETAR um candidato". Esta não veta —
-                              #       ENGOLE, que é pior: o ponto desaparece da contagem.
-                              #
-                              #    🔑 LIGA-SE QUANDO O DETETOR DE SERVIÇO CHEGAR A 100%.
-                              #       E isso depende do PASSO 1: os 9 candidatos do BlurBall
-                              #       (8 ténis + 1 bola). Hoje o tracker prende-se a um sapato e
-                              #       a bola do serviço nunca é vista.
-                              #    ⚠️ A S42 está bloqueada PELA MESMA COISA. As duas destravam juntas.
-    "S42_CONFIRMA_FIM":False, # 🔴 A CONFIRMAÇÃO DO FIM (Vasco, 13 jul). LEI CERTA, CÓDIGO PRONTO,
-                              #    DESLIGADA POR DECISÃO DELE — não por falhar.
-                              #    "para um ponto acabar, a pancada SEGUINTE deve SEMPRE ser SERVIÇO"
-                              #    Ligada dava: recall 96,8 -> 97,2 · precisão 95,4 -> 94,7 · 13/13
-                              #    ⚠️ PORQUE ESTÁ DESLIGADA: a margem do ramo não-confirmado ainda
-                              #       serve de COLA — no Barbosa fundia os pontos 13 e 14 (22 -> 21).
-                              #       A cola tem de sair da margem ANTES de isto voltar a ligar:
-                              #       "dois pedaços só são pontos DIFERENTES se houver um SERVIÇO
-                              #        entre eles" — e essa regra ainda não está escrita.
-                              #    ⚠️ E antes disso tudo: LIMPAR O SINAL (o público nas boxes, os
-                              #       ténis brancos lidos como bola). D12 — o problema é o SINAL.
+    "S42_CONFIRMA_FIM":False,  # 🆕🔴 A CONFIRMAÇÃO DO FIM. "para um ponto acabar, a pancada
+                              #    SEGUINTE deve SEMPRE ser SERVIÇO." Confirmado -> +1 s.
+                              #    Não confirmado -> o ponto NÃO acabou -> dúvida (S16).
 }
 # ⛔ AQUI NÃO ESTÃO a S18_MAO_PASSE nem a S19_2_TOQUES — e é de propósito (Vasco, 13 jul).
 #    Estavam aqui, a False, SEM CÓDIGO NENHUM POR TRÁS. Pô-las a True não fazia nada.
@@ -366,14 +330,7 @@ DUR_MIN    = 1.5
 #    E acrescenta a CONFIRMAÇÃO: só se corta rente se a próxima pancada for um SERVIÇO.
 #    Se NÃO for  =>  o ponto NÃO ACABOU  =>  cai na DÚVIDA (S16) e leva mais margem.
 #    ⚠️ Nunca CORTA um candidato (D18): na dúvida ESTICA. Não pode perder um ponto.
-M_CONFIRMADO = 2.0  # 🔒 A RÉGUA DO VASCO, a VER O VÍDEO (13 jul). Chegou aqui em 3 passos:
-                    #      1,0 s -> ele viu os finais dos pontos 4/5/7/10: "é muito pouco, põe 3"
-                    #      3,0 s -> os 3 s COLARAM os pontos 13 e 14 do Barbosa num bloco de 17,8 s
-                    #      2,0 s -> "2 segundos é o melhor."   <- ESTE. Ele decidiu A VER.
-                    #    ⚠️ NÃO SUBIR. Acima de 2 s a margem funde PONTOS VIZINHOS (medido no
-                    #       Barbosa: 22 pontos -> 21). A margem de apresentação não pode ser cola.
-M_NAO_CONFIRM = 3.0 # ⚠️ AJUSTE MEU (declarado). O ramo "NÃO SEI se acabou" — leva MAIS margem
-                    #    que a certeza, pela lei da S16 ("na dúvida, estica"). Nunca menos.
+M_CONFIRMADO = 1.0  # ⚠️ AJUSTE — o "apenas mais um segundo" do Vasco.
 
 # --- S17 / S18 — FIM CERTO -> corte a 0,5 s  (regras do Vasco, 13 jul) ---
 M_FIM_CERTO = 0.5   # "mal detetes que toca na rede/mão, máximo 0,5s e o ponto está terminado"
@@ -382,23 +339,7 @@ M_FIM_CERTO = 0.5   # "mal detetes que toca na rede/mão, máximo 0,5s e o ponto
 #      NÃO MEXER. NÃO "AFINAR". NÃO "MELHORAR". Pontos 2, 3, 5 e 10 acabam ao segundo.
 RED_DTHETA  = 60    # ⚠️ ajuste — a viragem de uma bola que BATE. A que passa por cima quase não vira.
 RED_L_PARA  = 2.0   # ⚠️ ajuste — a bola a PARAR
-RED_DIST    = 0.17  # ✅ FRAÇÕES do meio-campo local (não são píxeis). "longe de qualquer box"
-                    # 🔴 ERA 0.10 até 13 jul (= 70 cm). E 70 cm ERA CURTO DEMAIS:
-                    #
-                    #     A BOX É O CORPO. A RAQUETE CHEGA A MAIS DE UM METRO.
-                    #
-                    #    Uma bola batida à VOLEIA sai da raquete e fica a 70 cm–1,2 m do corpo:
-                    #    "LONGE" pela regra — mas FOI BATIDA. A S17 lia isso como "bateu na rede"
-                    #    e MATAVA O PONTO A MEIO.
-                    #    Medido no Barbosa (contra o GT do Vasco): 4 dos 5 fins-a-meio-de-ponto
-                    #    eram VOLEIAS — a bola virava 70°, 75°, 77°, 86° ao pé da rede.
-                    #      0.10 (70 cm)  -> recall 79,6 · precisão 65,4 · fim_dentro 5
-                    #      0.17 (1,2 m)  -> recall 81,9 · precisão 65,7 · fim_dentro 3   <- ESTE
-                    #    Parada4: NÃO MEXE UMA DÉCIMA (96,8 / 95,4). É de graça.
-                    #    ⚠️ 0.17 = braço + raquete ≈ 1,2 m / 6,95 m (meio-campo). NÃO é um número
-                    #       mágico: é o ALCANCE DE UMA RAQUETADA. Sobrevive a outra câmara.
-                    #    ⚠️ NÃO RESOLVE O FUNDO: a box dos PÉS continua a não ver a RAQUETE.
-                    #       Isto é um penso. A cura é a POSE (ou o ÁUDIO). — via fechada conhecida.
+RED_DIST    = 0.10  # ✅ FRAÇÕES do meio-campo local (não são píxeis). "longe de qualquer box"
 
 MAO_L       = 3.0   # ⚠️ ajuste — a bola PARADA
 MAO_DUR     = 15    # frames (0,5 s). 🔒 NÃO BAIXAR: a 0,3 s a regra corta pontos a meio e o recall
@@ -665,33 +606,17 @@ def rallies(CR, PAN, FIM=(), RES=(), R=None, prof=None):
         if REGRAS["S42_CONFIRMA_FIM"] and pan and RES and R is not None and prof is not None:
             ult = max(pan)
             seg = [q for q in PAN if q > ult]          # a PANCADA SEGUINTE (a 1.ª a seguir)
-            if not seg:
-                confirmado = True          # fim do vídeo: nada a contradizer
-            else:
-                prox = min(seg)
-                # ⚖️ DUAS condições. AMBAS leis do Vasco. NENHUM número novo.
-                #   ① a seguinte é um SERVIÇO (S23: teve um quique FUNDO antes)
-                #   ② e está a >= 4 s (PAUSA_CHAO) — "UM PONTO NÃO PODE COMEÇAR 4 s DEPOIS
-                #      DO OUTRO". Sem isto, uma pancada a meio de um rally passa por serviço:
-                #      num rally a bola TAMBÉM quica fundo. A regra dos 4 s é o que a desmente.
-                #      (Era ela que faltava: o ponto 21 do Barbosa cortava aos 413,2 s e perdia
-                #       8,3 s de jogo — a "pancada seguinte" estava a 2,8 s.)
-                confirmado = (e_servico(prox, R, RES, prof)
-                              and (prox - ult) >= PAUSA_CHAO * FPS)
+            # sem pancada seguinte => é o fim do vídeo => nada a contradizer => confirmado
+            confirmado = (not seg) or e_servico(min(seg), R, RES, prof)
 
         # S16 — CERTEZA (há pancada) -> corte rente. DÚVIDA (não há) -> mais margem.
-        # 🔴 S42 — CONFIRMAÇÃO, NÃO CORTE (ordem do Vasco):
-        #    a regra só APERTA (2 s -> 1 s) quando tem CERTEZA. Na dúvida, deixa como estava.
-        #    ⇒ é ESTRUTURALMENTE INCAPAZ de encurtar um ponto que não sabe que acabou (D18).
         if REGRAS["S16_DUVIDA"]:
             if pan and confirmado:
-                fim = int(max(pan) + M_CONFIRMADO*FPS)     # CERTEZA -> +3 s (a régua do Vasco)
-            elif pan and REGRAS["S42_CONFIRMA_FIM"]:
-                fim = int(max(pan) + M_NAO_CONFIRM*FPS)    # NÃO confirmado => o ponto NÃO acabou
+                fim = int(max(pan) + M_CONFIRMADO*FPS)     # 🔴 S42: +1 s e acabou
             elif pan:
-                fim = int(max(pan) + M_COM_PAN*FPS)        # (S42 desligada: o antigo +2 s)
+                fim = int(max(pan) + M_COM_PAN*FPS)        # há pancada, mas NÃO confirmada
             else:
-                fim = int(b + M_SEM_PAN*FPS)               # sem pancada -> +5 s
+                fim = int(b + M_SEM_PAN*FPS)               # sem pancada -> dúvida
         else:
             fim = int((max(pan) if pan else b) + M_COM_PAN*FPS)
         # S17/S18 — FIM CERTO (rede ou mão/corpo parada): não há dúvida a gerir.
@@ -706,37 +631,9 @@ def rallies(CR, PAN, FIM=(), RES=(), R=None, prof=None):
         return [(a, b) for a, b in S]
 
     # S13 — A TIMELINE NUNCA ANDA PARA TRÁS. Se dois se tocam, são O MESMO PONTO.
-    #
-    # 🔴 S43 — A COLA  (lei do Vasco, 13 jul):
-    #    "DOIS PEDAÇOS SÓ SÃO PONTOS DIFERENTES SE HOUVER UM SERVIÇO ENTRE ELES."
-    #    (Corolário directo do "NÃO HÁ PONTO SEM SERVIÇO".)
-    #
-    #    PORQUÊ: um ponto parte-se em dois quando a bola desaparece >SILENCIO entre dois
-    #    cruzamentos (volta de parede longa, bola alta, buraco no detetor). Até hoje, o que
-    #    os voltava a juntar era a SOBRA DA MARGEM DE APRESENTAÇÃO — o M_COM_PAN esticava o
-    #    1.º pedaço até TOCAR no 2.º. Isso não é uma regra: é um acidente.
-    #      ⇒ Ao encurtar a margem (S42), a cola soltou-se e o ponto 21 do Barbosa perdeu 8,3 s.
-    #      ⇒ Ao alargá-la, fundia pontos vizinhos (13 e 14 do Barbosa).
-    #    "A MARGEM DE APRESENTAÇÃO NÃO PODE SER A COLA." — Vasco
-    #
-    #    ⚠️ GUARDA (declarado): só cola dentro do SILENCIO (4 s) — o MESMO número que já
-    #       agrupa os cruzamentos. Sem este limite, um serviço NÃO detetado fundia o ponto 21
-    #       com o 22 do Barbosa: um mega-rally de 133 s com 105 s de INTERVALO lá dentro.
-    #       Nenhum número novo. E o pior caso acrescenta 4 s de lixo, nunca um ponto perdido.
-    def _abre_com_servico(a, b):
-        if not (REGRAS["S43_COLA"] and RES and R is not None and prof is not None):
-            return True                       # sem a regra, tudo é ponto novo (como sempre foi)
-        ps = [q for q in PAN if a <= q <= b]
-        if not ps:
-            return True                       # sem pancadas: não sei nada -> não colo (D18)
-        return e_servico(min(ps), R, RES, prof)
-
     M = [list(S[0])]
     for a, b in S[1:]:
-        toca = a <= M[-1][1]
-        # 🔴 S43: perto (<= SILENCIO) e NÃO abre com um serviço => é o MESMO ponto.
-        perto = (a - M[-1][1]) <= SILENCIO * FPS
-        if toca or (perto and not _abre_com_servico(a, b)):
+        if a <= M[-1][1]:
             M[-1][1] = max(M[-1][1], b)
         else:
             M.append([a, b])

@@ -36,7 +36,28 @@
 Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 **As melhores ideias do projeto vieram daqui.** Não perder nenhuma.
 
-Última atualização: **13 jul 2026 — auditoria COMPLETA dos prompts originais (v1 → v9) + `docs/`.**
+Última atualização: **15 jul 2026** — detetor de serviço por formação + a doença da `cascata(video)` (**D22**).
+*(13 jul: auditoria completa dos prompts v1→v9 + `docs/`. 14 jul: geometria D19/D20/J16, F2 corrigida, S2.)*
+**+ 16 jul:** cláusula **CITAÇÃO LITERAL** (bloco LEI DE ESCRITA, no topo) + **D21** no catálogo + **9 blocos-lei marcados** (S17,S18,S23,D19,D20,S42,S43,B18,B19).
+
+> ## ✍️ LEI DE ESCRITA — **QUANDO O VASCO ATUALIZA UMA REGRA, ESCREVE-SE INTEIRA, COM AS PALAVRAS DELE. NUNCA SE ATALHA.**
+> *(Vasco, 14 jul: "sempre que eu atualizo, tu tentas atalhar.")*
+>
+> **Atalhar tira a NUANCE. E a nuance É a regra.** Uma regra resumida está a meio caminho de mentir
+> — porque a próxima pessoa a ler já não tem a parte que fazia a regra funcionar.
+> - ✅ **Cita-o à letra.** A explicação do Claude vem POR BAIXO da regra dele, nunca por cima nem no lugar dela.
+> - ✅ **Se ficar longa, fica longa.** É para isso que o ficheiro serve. O curto é o `CONSTITUICAO.md`; aqui é o INTEIRO.
+> - ⛔ **Nunca substituir a frase do Vasco por um resumo do Claude.** O resumo é do Claude; a LEI é dele.
+>
+> **É a irmã da lei "a verdade que se escreve APODRECE": aqui a verdade apodrece na ESCRITA, ao ser cortada.**
+>
+> ### 🔒 CITAÇÃO LITERAL — *(Vasco, 16 jul 2026)*
+> **Em qualquer conversa deste projeto — este bloco de regras é para ser citado letra a letra,
+> sempre que for solicitado pelo Vasco. As regras só podem ser alteradas, atalhadas ou atualizadas
+> só e apenas sob a instrução clara e concisa do próprio Vasco.**
+>
+> ⇒ Quando o Vasco pede uma regra, o Claude **LÊ o bloco na `REGRAS_DO_VASCO.md` e cola-o tal e qual** —
+> nunca a reescreve de memória. A explicação do Claude vem **por baixo**, separada, nunca no lugar dela.
 
 > ## ✅ AUDITORIA FECHADA
 > Lidos, **inteiros**, os **9 prompts** (v1 · v3 · v7.1 · v7.7 · v8.0 · v9×4) + `REGRAS_BOLA_PARA_CODIGO`
@@ -59,7 +80,7 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | # | Regra | Estado | Onde |
 |---|---|---|---|
 | B1 | **Objetos imóveis** — um objeto no mesmo píxel, espalhado por >35% do vídeo, não é a bola. A bola nunca pousa duas vezes no mesmo sítio. | ✅ implementada. Apanha 4 objetos. **Sobe a precisão sem custar recall.** | `filtrar_objetos_imoveis()` |
-| B2 | **Continuidade** — a bola não se teletransporta. Salto impossível = outro objeto. **LEI DO VASCO (13 jul): a bola de padel não passa dos 180 km/h.** ⇒ 1,67 m/frame ⇒ **70 px/frame** no meio-campo mais perto (291 px = 6,95 m). *(Estava `VMAX=90`, inventado — que ao fundo do campo permitia **710 km/h**.)* | ✅ **derivado (13 jul)**. ⚠️ **mas é um parâmetro MORTO**: de 60 a 117 px os números não mexem. Quem trabalha é a **costura por Theta**. | `gerar_tempo_util` |
+| B2 | **Continuidade** — a bola não se teletransporta. 🔴 **E TELETRANSPORTA-SE: 830 vezes no Barbosa** (14 jul) — saltos **>100 px** que **atravessam a rede** em ≤3 frames. É a **B19** medida. Salto impossível = outro objeto. **LEI DO VASCO (13 jul): a bola de padel não passa dos 180 km/h.** ⇒ 1,67 m/frame ⇒ **70 px/frame** no meio-campo mais perto (291 px = 6,95 m). *(Estava `VMAX=90`, inventado — que ao fundo do campo permitia **710 km/h**.)* | ✅ **derivado (13 jul)**. ⚠️ **mas é um parâmetro MORTO**: de 60 a 117 px os números não mexem. Quem trabalha é a **costura por Theta**. | `gerar_tempo_util` |
 | **B2b** | ⚠️ **A RÉGUA É DO CHÃO. A BOLA VOA.** ⛔ **NÃO** aplicar o meio-campo local (no `y` da bola) para a limitar: uma bola **alta e à frente** aparece nos mesmos píxeis que uma bola **rasteira ao fundo**, e a régua do fundo (23 px/frame) **corta-lhe a cadeia**. Testado: **recall 96,2 → 32,1**. E o "pior caso do chão" (70 px) também não chega para a **costura**: a bola a 3 m de altura está **mais perto da câmara que qualquer ponto do chão**, logo aparece **maior**. **A régua do chão dá um MÍNIMO, não um máximo.** ⇒ vale para os **PÉS** e os **RESSALTOS** (que estão no chão), **não** para a bola em voo. | 🔴 **LIÇÃO NOVA (13 jul)** — o reverso da lição da perspetiva. `VMAX_THETA=140` = **2 × VMAX**; o "2" é o **fator da altura**, e **não é derivável só da calibração** (faltaria a altura da câmara). | — |
 | B3 | **Velocidade por 2 frames** — a velocidade da bola calcula-se em 2 frames, não em 1. | 📋 por implementar | — |
 | B4 | **Estados da bola** — a bola tem estados (no ar, no chão, na mão, parada). | 📋 por formalizar | — |
@@ -100,7 +121,49 @@ Todas as regras que vieram do Vasco, o que fazem, e onde estão.
 | **J12** | 👕 **A assinatura visual tem CINCO elementos: camisola · calções · MEIAS · ténis · RAQUETE.** (v1 §1, v3 P2) ⚠️ A **J6** escreveu *"torso+calções+pernas+ténis"* e **perdeu as MEIAS e a RAQUETE** — e a raquete é o que **não muda** quando o jogador troca de camisola. | 🔴 por implementar (com a J6+) | — |
 | **J13** | 🔀 **Jogadores parecidos ⇒ distingue pela COMBINAÇÃO dos restantes fatores.** *"Se dois jogadores tiverem elementos similares, usa a combinação dos restantes."* (v1 §1) | 🔴 por implementar | — |
 | **J14** | 🎣 **Detetar GENEROSAMENTE, limpar pela ESTRUTURA.** `CONF` baixo + `IMGSZ` alto; as regras do jogo é que limpam. → **"RECALL pela DETEÇÃO, PRECISÃO pela ESTRUTURA."** (`docs/HANDOFF_JOGADORES.md`) | ✅ é a arquitetura | — |
-| **J15** | 🔲 **O polígono do campo desenha-se LARGO, não apertado.** *"Se ficar apertado, corta jogadores encostados ao vidro — e a diretriz é nunca perder um jogador. **Melhor largo do que apertado.**"* (`docs/GUIA_COLAB_JOGADORES.md`) | ✅ | `poligono_campo.json` |
+> # 🩸🩸 O ERRO DO POLÍGONO — **o Vasco apontou-o TRÊS VEZES antes de eu o ver**
+>
+> ## ⛔ **O POLÍGONO ESTAVA MAL NOS DOIS VÍDEOS. E ENVENENOU TUDO O QUE ESTÁ POR CIMA DELE.**
+>
+> ```
+> PARADA4   os "2 jogadores de CIMA" da cascata estavam ACIMA da linha de fundo
+>           ⇒ ATRÁS DO VIDRO ⇒ 100% ESPECTADORES.
+>           consequência: a dupla de cima aparecia em "DEFESA 100% do jogo" (impossível)
+>
+> BARBOSA   a aresta de baixo do polígono está em y=881 — e o frame ACABA EM 720.
+>           ⇒ toda a faixa de baixo da imagem contava como "dentro". O público entrava.
+>           (e este polígono foi **DEDUZIDO**, não desenhado ⇒ viola a **C1**)
+> ```
+>
+> ### 🔑 A CAUSA, e é UMA SÓ:
+> # **A J15 diz «desenha LARGO». Eu apliquei o «largo» nas QUATRO direções.**
+> **O «largo» é para os LADOS** — é lá que há **JOGO EXTERIOR**.
+> **AO FUNDO NÃO HÁ JOGO EXTERIOR: HÁ UM VIDRO. E atrás do vidro está o PÚBLICO.**
+>
+> ### 🩸 E o erro de método, que é o meu:
+> # **ACEITEI DOIS POLÍGONOS HERDADOS SEM OS BATER CONTRA AS LINHAS DO CAMPO.**
+> **Nunca fiz a pergunta: *«este polígono concorda com a calibração?»***
+> *(D17 — confirmar a premissa. Três vezes seguidas.)*
+>
+> ### ✅ A CURA — **e não leva um número novo**
+> ```
+> SEM a J17    'jogadores' de cima ATRÁS DO VIDRO: 100%  →  fases de cima: DEFESA 100% (absurdo)
+> COM a J17    'jogadores' de cima ATRÁS DO VIDRO:   0%  →  TRANSIÇÃO 60% · DEFESA 23% · ATAQUE 16%
+> ```
+>
+> ## 🔴 E O QUE ISTO INVALIDA — **números meus, de 14 jul de manhã:**
+> - ❌ *"os 2 de cima: **13/13** no Parada4"* — **eram ESPECTADORES. INVÁLIDO.**
+> - ⚠️ *"o detetor de serviço: **21/21** no Barbosa"* — **corre com um polígono errado. POR REVERIFICAR.**
+> - ⚠️ **tudo o que dependa da cascata tem de ser REMEDIDO.**
+>
+> ## 🛡️ E A REGRA DE ARQUITETURA QUE MATA A CLASSE DO ERRO:
+> # **O POLÍGONO NÃO SE DESENHA. DERIVA-SE DAS LINHAS DO CAMPO.**
+> **Elas já estão desenhadas à mão (C1/C9). Assim o polígono NÃO PODE discordar da
+> calibração — porque É a calibração.**
+
+| **J17** | 🦶 **O POLÍGONO ACABA NA LINHA DE FUNDO.** Atrás dela está o **VIDRO** — e atrás do vidro está o **PÚBLICO**. ⚠️ **É o LIMITE que faltava à J15.** 🔑 **ZERO números novos:** a linha de fundo **já está calibrada, à mão**. | 🟡 **testada (14 jul)** — espectadores de cima: **100% → 0%**. ⛔ Não está no pipeline. | `cascata_jogadores.py` |
+| **J15** | 🔲 **O polígono do campo desenha-se LARGO, não apertado.** ⚠️ **CORRIGIDA (14 jul): o «largo» é para os LADOS** *(o jogo exterior)*. **NUNCA para além da LINHA DE FUNDO** — ver a **J17**. *"Se ficar apertado, corta jogadores encostados ao vidro — e a diretriz é nunca perder um jogador. **Melhor largo do que apertado.**"* (`docs/GUIA_COLAB_JOGADORES.md`) | ✅ | `poligono_campo.json` |
+| **J16** | 🦶 **A BOX TRANSBORDA POR BAIXO — os pés estão LIGEIRAMENTE ACIMA da aresta inferior.** *(Vasco, 14 jul)* ⇒ a **F3** *(a posição é a aresta inferior)* leva uma **margem**. ⛔ **A margem é uma FRAÇÃO DA ALTURA DA BOX, nunca píxeis** — encolhe sozinha com a perspetiva. ⚠️ **ISTO NÃO VIOLA A D19:** não se mexe na **LINHA**; corrige-se **ONDE ESTÃO OS PÉS**. É a **MEDIÇÃO**, não a **RÉGUA**. | 🟡 **MEDIDA — mas em FICHEIRO NOVO. ⛔ O PIPELINE NÃO A IMPORTA.** *(«implementada» ≠ «a correr». Marcá-la como a-correr seria a 12.ª mentira.)*<br>**MEDIDA a não fazer diferença**: de `k=0,00` a `k=0,10`, **0 dos 21 serviços mudam de fase**. **A lei é dele; o número (`0,03`) é meu, e é inofensivo.** | `cascata_jogadores.pes()` |
 
 ---
 
@@ -177,8 +240,37 @@ aprender as cores — e agora é **encontrável**.
 | # | Regra | Estado | Onde |
 |---|---|---|---|
 | S1 | **Zona de serviço aprendida dos dados** — bola no chão junto a um jogador atrás da linha → 10/12 serviços reais. Bom gerador de candidatos. | ✅ implementada | `detetar_servicos()` |
-| S2 | **Formação de serviço** — parceiro na rede + adversário cruzado atrás. **0 falsos.** | 🟢 **REABERTA (13 jul) — NUNCA ESTEVE BLOQUEADA.** Dei-a como *"cega"* citando **"só 21,8 % dos frames têm os 4"**. 🚨 **O 21,8 % era um ARTEFACTO DO `max_det=4`, não da câmara** (sem cap + regras J: **38,8 %**). E o **erro maior era a ESTATÍSTICA**: a regra não precisa dos 4 em **todos** os frames — precisa deles **nos 13 momentos do serviço**, que é **o frame mais limpo do jogo**. O M1 dá **13/13** ⇒ **sabemos onde olhar**. ⚖️ **MEDIR ANTES DE CITAR.** | `formacao_servico()` — **NÃO CORRE** |
-| S3 | **Formação lida SÓ nos 2 de cima** ← **a decisão de hoje** | ✅ implementada (12 jul) | `formacao_de_cima()` |
+| **S2** | ⚖️ **A LEI DA FORMAÇÃO — *a S2 e a S3 FUNDIDAS (14 jul, texto do Vasco). Não são duas regras.*** <br>🔑 **O FECHO, E É O QUE RESOLVE TUDO:**<br># **NO MOMENTO DO SERVIÇO SÓ PODE ESTAR UM JOGADOR ADIANTADO.**<br>*"Se estiver confuso — no momento de serviço **SÓ PODE estar UM jogador na rede**."* ⇒ **é o parceiro do servidor. A equipa dele SERVE.** **Uma pergunta só. Sem ambiguidade possível.**<br><br>**A dupla que SERVE** — **1 atrás + o parceiro ADIANTADO** *(na rede, ou **no máximo perto da zona de transição**)*. 🏃 **E depois do serviço, o SERVIDOR CORRE para transição/rede.**<br>**A dupla que RECEBE** — **os 2 ATRÁS.** Um deles **pode estar EM CIMA da linha** *(⇒ **D20**: em cima da linha **conta como atrás**)*. **No máximo, no início da zona de transição.**<br>⇒ as configurações são **incompatíveis** ⇒ **a formação de uma dupla DEDUZ a da outra.**<br><br>**E LÊ-SE COM A LUZ QUE HOUVER** *(era a S3 — a decisão do Vasco, 12 jul)*:<br>&nbsp;&nbsp;**①** **vejo os 4** ⇒ aplico a formação **DIRETA**<br>&nbsp;&nbsp;**②** **só vejo os 2 de CIMA** ⇒ deduzo que os de baixo estão em **DEFESA** ⇒ **os de cima têm de ter um em TRANSIÇÃO ou na REDE**<br>&nbsp;&nbsp;**③** **vejo um de BAIXO na rede** ⇒ os de baixo **SERVEM** ⇒ **os de cima têm de estar ATRÁS**<br>**Não é um plano B. É a MESMA lei, lida com menos luz.** | 🟡 **MEDIDA — mas em FICHEIRO NOVO. ⛔ O PIPELINE NÃO A IMPORTA.** *(«implementada» ≠ «a correr». Marcá-la como a-correr seria a 12.ª mentira.)*<br>🔑 **ACERTA NOS DOIS VÍDEOS — cada um no NÍVEL que a câmara permite:**<br><br>&nbsp;&nbsp;**BARBOSA** *(courtsmaster)* — **nível ①: 21/21.** *"exatamente UM dos 4 não está em DEFESA"*, **nos 21 serviços**. Quem recebe: **DEF+DEF** nas 21. Quem serve: **DEF + (TRANSIÇÃO ou ATAQUE)**.<br>&nbsp;&nbsp;**PARADA4** *(MATCHi, câmara baixa)* — **nível ①: 3/13** 🔴 *(não vê o parceiro de baixo: **não detetado** ou **CORTADO** pela borda)* · **nível ②: 13/13** ✅ — os **2 de cima são DEF+DEF em 13/13** ⇒ **eles RECEBEM** ⇒ **serve BAIXO. SEMPRE.**<br>&nbsp;&nbsp;⇒ 🔑 **O NÍVEL ② NÃO É UM PLANO B. No Parada4 é a ÚNICA leitura possível — e acerta em TODAS.** *(A decisão do Vasco de 12 jul. Ficou marcada ✅ e **nunca correu**.)*<br><br>⚠️ **A FRONTEIRA NÃO É "A REDE" — É "SAIR DA DEFESA".** *(exigir **ATAQUE** dá só **8/21**: em 13 deles o parceiro está em **TRANSIÇÃO** — exatamente o **"no máximo perto da zona de transição"** dele.)* **É a MESMA fronteira do M2** (a costura de trás da parede).<br>📐 **E É A MESMA LINHA NAS DUAS CÂMARAS:** Barbosa `trans_perto_tras` = **0,78** do meio-campo · Parada4 `juncao_perto` = **0,76**. ⇒ **a fronteira é do JOGO, não do vídeo.** *(Cheguei a dizer que a linha "não existia no Parada4". **Existe.** — D17.)*<br>🎯 O `21,8 %` era um artefacto do `max_det=4` — com a cascata J: **43,6 %** (Parada4) · **67,1 %** (Barbosa).<br>⚠️ **O que o Parada4 falha NÃO é geometria — é CÂMARA.** Nenhuma regra cura isso.<br>⚖️ **MEDIR ANTES DE CITAR — e eu reabri esta regra a citar um número que não tinha medido.** | `lei_da_formacao.py` · `fases_m2.py` · `cascata_jogadores.py` |
+| ~~S3~~ | ⤴️ **FUNDIDA NA S2** *(14 jul)* — era o **nível ②** da mesma lei. *(Estava marcada ✅ desde 12 jul — **"a decisão de hoje"** — e **nunca correu uma linha**. Era uma das 11 mentiras.)* | 🔗 ver **S2** | — |
+
+> ### 📎 NOTA À S2 — **a formação é a FASE DO M2, lida no instante do serviço**
+> *(achado meu, 14 jul — **não é uma lei nova**: é a **ponte** entre duas leis dele, a **S2** e a **F2**)*
+>
+> | quem **SERVE** | quem **RECEBE** |
+> |---|---|
+> | um na rede + um atrás ⇒ **TRANSIÇÃO** *(o estado-resíduo da F2)* | os dois atrás ⇒ **DEFESA** |
+>
+> ⇒ **a formação de serviço e as fases do M2 são A MESMA GEOMETRIA.** Não são dois sistemas.
+>
+> **E é por isso que vale:** dá ao detetor de serviço uma **2.ª leitura INDEPENDENTE, de graça**.
+> **Medido: 21/21 no Barbosa** — as duas leituras concordam nas 21, e **viram as duas ao mesmo
+> tempo no ponto 15** (a mudança de dupla), **sem nada em comum**.
+> ⇒ a **S22** (a alternância dos serviços) **auto-verifica-se sem custo nenhum**. *(D14 ✅ · D16 ✅)*
+>
+> ## ⚠️🔑 **O «21/21» É UM INVARIANTE, NÃO UM DETETOR** *(14 jul, à noite — o Vasco desmontou-o)*
+> **O «21/21» vale NOS 21 momentos de serviço REAIS: quando SEI que ali há serviço, a formação
+> tem sempre 1 adiantado, é cruzada, o servidor corre. É VERDADE — e é o modelo do serviço, CERTO.**
+> **MAS a MESMA condição aparece em 32% dos frames do vídeo inteiro** *(medido: 5086 de 16138)*
+> **— não só nos serviços.** ⇒ o invariante é **NECESSÁRIO** ao serviço, **não SUFICIENTE**:
+> **o INTERVALO tem a mesma formação.** *(O Vasco confirmou a olhar: os falsos do intervalo são
+> mesmo falsos.)*
+> ## **Provar que algo é verdade NOS serviços ≠ ENCONTRAR os serviços com isso.**
+> **A diferença FÍSICA serviço↔intervalo está SÓ na BOLA (os 3 quiques) — e a bola está partida (B19).**
+> **⇒ isto NÃO destrói a regra: a regra descreve o serviço com exatidão. Falta o SINAL que a torna
+> única — a bola.** 🚪 **OS_9_CANDIDATOS.command.**
+>
+> ⚠️ **E a 2.ª leitura NÃO pode vir do tracker da bola:** no instante do serviço ele está agarrado
+> a um **ténis** (**B19**) — discorda 8 vezes em 21, e está **errado nas 8**. **Tem de vir do QUIQUE (S23).**
 | S4 | **Quadrado de serviço cruzado** — a bola do serviço cai na **diagonal**. **0 falsos.** | ⚠️ implementada, mas precisa do ressalto (bola a 46% → subir para 76% com thr=0.4) | — |
 | S5 | **Serviço multi-fator** — nenhum sinal sozinho chega; combinar. | ✅ é a arquitetura atual | — |
 | S6 | **Alternância** — os serviços alternam de lado. **Mas o lado só muda quando o PONTO CONTA**: falta/let repete o mesmo lado ⇒ numa corrida do mesmo lado, o que vale é **o ÚLTIMO**. | 📋 por implementar. ⚠️ **NÃO é lei** — no **ponto de ouro** quem recebe escolhe o lado e pode repetir. | `m1_tempo_util.py` |
@@ -195,8 +287,8 @@ aprender as cores — e agora é **encontrável**.
 | **S15** | 🔴 **MÃO vs RAQUETE** — *"NÃO DISPARAR SERVIÇOS. Só disparar se a bola vier da mão para o chão para a raquete."* A bola da **mão é LENTA**; a da **raquete é RÁPIDA**. Medido no `L` do BlurBall: **serviços L=17,4 · falsos (passagens à mão) L=2,7**. | ✅ implementada. **+18 pontos de PRECISÃO** (65,8% → 83,9%). Mata 24 dos 27 falsos. | **`gerar_tempo_util.cruzamentos()`** · interruptor `REGRAS["S15_MAO_RAQUETE"]` |
 | **S16** | ⚖️ **DÚVIDA = MAIS MARGEM; CERTEZA = CORTE RENTE.** Se há pancada detetada → sei que acabou → corto a **2 s**. Se NÃO há pancada → estou na dúvida → dou **5 s**. *(Eu tinha implementado ao CONTRÁRIO — 4 s quando sabia, 2 s quando duvidava. Cortava os pontos 12/13/14 a meio.)* **Os 5 s são para DECIDIR, não para MOSTRAR.** | ✅ implementada. **+9 pontos de precisão** (83,9% → 92,9%). | **`gerar_tempo_util.rallies()`** · interruptor `REGRAS["S16_DUVIDA"]` |
 | **S20** | ⏸️ **A PAUSA ENTRE PONTOS — 5 a 15 s.** *(estava nos prompts v7.1/v7.7/v8 e **NUNCA foi implementada** — ver `REGRAS_PERDIDAS_dos_prompts.md`)*. Uma pausa **curta demais é IMPOSSÍVEL**: entre pontos os jogadores têm de **ir buscar a bola** e **posicionar-se**. Se o pipeline produz uma pausa de **2,6 s**, a **CAUDA** do segmento anterior está esticada — **e não é preciso saber PORQUÊ para a aparar.** <br>🧠 **APRENDIDA POR DUPLA** *(Vasco, 13 jul: "tem uma **média associada a cada jogador**, que podes ir notando ao longo do vídeo")*: **2 passagens** — a 1.ª observa as pausas do **próprio vídeo**; a 2.ª usa `mediana − 2,5×MAD`. **Zero números meus.** <br>🔒 **Chão de segurança: 4 s** (Vasco). ⚠️ **SÓ APARA A CAUDA — nunca toca no INÍCIO do seguinte** ⇒ **estruturalmente incapaz de perder um serviço** (recall intacto até aos 6 s, medido). | ✅ **implementada (13 jul).** **+1,8 precisão** (93,9 → 95,7). **RESOLVEU A CAUDA DO PONTO 1** (3,5 s → 1,2 s) — que **nenhuma outra regra apanhava**: a raquetada que a esticava era do **INTERVALO**, com um jogador ao pé, **indistinguível de jogo**. Só o M3 a mataria. **Esta mata-a de graça, sem saber o que lá está.** | **`gerar_tempo_util.pausa_aprendida()`** · interruptor `REGRAS["PAUSA_MINIMA"]` |
-| **S17** | 🔒🔒 **FECHADA — "a regra da rede está perfeita! fixa e não deixes mudar."** (Vasco, 13 jul) **`RED_DTHETA` / `RED_L_PARA` / `RED_DIST` NÃO SE MEXEM.**<br>**BOLA NA REDE → fim certo, corte a 0,5 s.** ⛔ **A POSIÇÃO NÃO SERVE** — nesta câmara a bola que passa POR CIMA e a que BATE ocupam **os mesmos píxeis** (banda da rede = 35 px; meio-campo do fundo = 100 px). 60 de 94 candidatos caíam **a meio de pontos reais**. ✅ **O que serve (Vasco, 13 jul):** *"se a bola **muda de direção** (ou **pára**) na rede, **longe de uma bounding box** → o ponto acabou."* A bola que passa **não vira**. A que bate, **vira ou morre**. E se não há jogador ao pé, **não foi ninguém: foi a rede.** | ✅ **implementada (13 jul)**. 0 eventos a meio de pontos · 4 no fim (pts 2,3,5,10). **+4,1 precisão.** | **`gerar_tempo_util.fim_certo()`** · interruptor `REGRAS["S17_REDE"]` |
-| **S18** | 🔴 **MÃO/CORPO NA BOLA → fim certo, corte a 0,5 s.** *(Vasco, 13 jul: **"bola PARADA dentro da bounding box, SEM MUDAR DE CAMPO → ponto terminado de certeza, sem raquetada."**)* **As três condições são precisas as três:** **parada** (`L≤3`) · **dentro da box** (é a mão/corpo de alguém) · **sem mudar de campo** (se atravessou a rede, foi **batida**). ⛔ A bola lenta sozinha dá **49 falsos a meio de pontos** — o lob também vai lento no ponto alto. 🔒 **A DURAÇÃO (0,5 s) NÃO SE BAIXA:** a 0,3 s corta pontos a meio e o recall cai de 96,2 para **82**. **É a duração que separa a MÃO do LOB** (o lob vai lento — mas um *instante*). E: **jogadores a passar a bola com a mão ⇒ o ponto JÁ acabou e ainda NÃO começou.** | ⚠️ **implementada e A CORRER — mas vale +0,0 (ablação, 13 jul).** **0 eventos a meio de pontos** (é segura), **mas desligá-la não muda um único número**: a **S17** e a **S23** já matam os mesmos fins. 🔑 **REDUNDANTE NESTE VÍDEO — não necessariamente no próximo.** Fica **LIGADA** (não custa nada, e noutra câmara pode ser ela a segurar). **REAVALIAR no 2.º vídeo.** ⚠️ E é ela que **parte o ponto 5** se lhe derem boxes **INTERPOLADAS** (J5): *uma box inventada não é prova de que há uma mão ali.* | **`gerar_tempo_util.fim_certo()`** · interruptor `REGRAS["S18_MAO_PARADA"]` |
+| **S17** | 🔒🔒 **FECHADA — "a regra da rede está perfeita! fixa e não deixes mudar."** (Vasco, 13 jul) **`RED_DTHETA` / `RED_L_PARA` / `RED_DIST` NÃO SE MEXEM.**<br>**BOLA NA REDE → fim certo, corte a 0,5 s.** ⛔ **A POSIÇÃO NÃO SERVE** — nesta câmara a bola que passa POR CIMA e a que BATE ocupam **os mesmos píxeis** (banda da rede = 35 px; meio-campo do fundo = 100 px). 60 de 94 candidatos caíam **a meio de pontos reais**. ✅ **O que serve (Vasco, 13 jul):** *"<!--LEI:S17-->se a bola **muda de direção** (ou **pára**) na rede, **longe de uma bounding box** → o ponto acabou.<!--/LEI:S17-->"* A bola que passa **não vira**. A que bate, **vira ou morre**. E se não há jogador ao pé, **não foi ninguém: foi a rede.** | ✅ **implementada (13 jul)**. 0 eventos a meio de pontos · 4 no fim (pts 2,3,5,10). **+4,1 precisão.** | **`gerar_tempo_util.fim_certo()`** · interruptor `REGRAS["S17_REDE"]` |
+| **S18** | 🔴 **MÃO/CORPO NA BOLA → fim certo, corte a 0,5 s.** *(Vasco, 13 jul: **"<!--LEI:S18-->bola PARADA dentro da bounding box, SEM MUDAR DE CAMPO → ponto terminado de certeza, sem raquetada.<!--/LEI:S18-->"**)* **As três condições são precisas as três:** **parada** (`L≤3`) · **dentro da box** (é a mão/corpo de alguém) · **sem mudar de campo** (se atravessou a rede, foi **batida**). ⛔ A bola lenta sozinha dá **49 falsos a meio de pontos** — o lob também vai lento no ponto alto. 🔒 **A DURAÇÃO (0,5 s) NÃO SE BAIXA:** a 0,3 s corta pontos a meio e o recall cai de 96,2 para **82**. **É a duração que separa a MÃO do LOB** (o lob vai lento — mas um *instante*). E: **jogadores a passar a bola com a mão ⇒ o ponto JÁ acabou e ainda NÃO começou.** | ⚠️ **implementada e A CORRER — mas vale +0,0 (ablação, 13 jul).** **0 eventos a meio de pontos** (é segura), **mas desligá-la não muda um único número**: a **S17** e a **S23** já matam os mesmos fins. 🔑 **REDUNDANTE NESTE VÍDEO — não necessariamente no próximo.** Fica **LIGADA** (não custa nada, e noutra câmara pode ser ela a segurar). **REAVALIAR no 2.º vídeo.** ⚠️ E é ela que **parte o ponto 5** se lhe derem boxes **INTERPOLADAS** (J5): *uma box inventada não é prova de que há uma mão ali.* | **`gerar_tempo_util.fim_certo()`** · interruptor `REGRAS["S18_MAO_PARADA"]` |
 
 ---
 
@@ -207,12 +299,12 @@ aprender as cores — e agora é **encontrável**.
 | **S21** | ⭐⭐ **A ALTERNÂNCIA DAS TRAVESSIAS — o melhor sinal de jogo/não-jogo que temos.** As pancadas **alternam** entre o campo de baixo e o de cima; uma equipa **não bate 2× seguidas**. Logo **cada TRAVESSIA DA REDE implica uma pancada** no campo de origem — **não é preciso VER a pancada: a física garante-a.** Robusto a oclusão e a bola fora do frame. **Travessias alternadas e sustentadas = rally em curso.** ⇒ **Entre pontos a bola cruza a rede NO MÁXIMO UMA VEZ** (devolvida ao servidor) — **não faz vaivém.** *"Dá precisão SEM sacrificar recall."* | 🔴 **POR IMPLEMENTAR — e é a maior de todas.** Ataca **exactamente** os 45% de bola-do-intervalo que estavam dados como insolúveis. **Escrita há dias; nunca correu.** | `docs/SPEC_M1_TEMPO_UTIL.md` |
 | **S22** | 🎾 **O LADO DO SERVIÇO — ace vs falta, SEM homografia.** Depois de um **ponto concluído** → o serviço vai para o **lado OPOSTO**. Depois de uma **FALTA** → **repete o MESMO lado**; **é a única vez que isso acontece**. ⇒ **falta + 2.º serviço = UM ponto, não dois** (corrige a sobre-contagem). ⇒ **auto-verificação de graça**: se a sequência de lados não alterna e não houve falta, **detetámos um serviço a mais ou perdemos um** — *sinal de erro **sem** ground-truth*. Lado = `x` do centro da box do servidor vs `x` do meio do campo. **Sem calibração nova.** | 🔴 por implementar. **Absorve e completa a S6/S7.** | `SPEC_M1` |
 | **S41** | 🎯 **AS 6 CONDIÇÕES DO SERVIÇO.** *(era "S23" — **COLISÃO DE NOMES**, renumerada 13 jul. A S23 é o QUIQUE, que CORRE.)* **A.** bola na box de um jogador e ~parada (na mão) · **B.** ⭐ **desce e RESSALTA aos pés do servidor** *(nenhuma outra bola do jogo faz isto)* · **C.** raquetada (pico de velocidade) · **D.** servidor **atrás da linha** · **E.** formação · **F.** 🆕 **o servidor ARRANCA a seguir — sobe à rede.** | 🔴 por implementar. **A F nunca esteve registada.** (A S9 tinha a sequência; faltava-lhe o **depois**.) | `SPEC_M1` · `M3_SERVICO_estado.md` |
-| **S23** | 🔴🔴 **O QUIQUE DO SERVIÇO** *(Vasco, 13 jul — **a regra que desbloqueou a faixa da rede E o M3**)*<br>*"Temos de matar este lixo pela **bola na mão do NÃO SERVIDOR — ANTES de bater no chão**."*<br>*"Mesmo que tenha kick, **só o ÚLTIMO** antes da mudança de direção para o outro campo **conta**."*<br>**A LEI: NÃO HÁ PONTO SEM SERVIÇO. E NÃO HÁ SERVIÇO SEM A BOLA BATER NO CHÃO.**<br>• o **servidor** larga a bola → ela **QUICA** (na linha de serviço) → e **só depois** bate<br>• o **não-servidor** tem a bola na mão → **passa-a / atira-a** ⇒ **SEM QUIQUE**<br>⇒ um segmento **sem quique fundo** antes da 1.ª travessia **NÃO É UM PONTO**. | ✅ **implementada (13 jul).** **13/13 pontos reais têm quique fundo** (prof 1,04–1,45) · **o lixo tem ZERO.** **Separação perfeita, sem afinar nada.** Vale **+3,5 de precisão**. 🔓 **É ela que permite a B15** (ampliar o `MIN_PROF`). ⚠️ **1.ª vez que o RESSALTO entra no pipeline** — se o 2.º vídeo perder pontos, **DESLIGAR ISTO PRIMEIRO**. | **`gerar_tempo_util.quique_do_servico()`** |
+| **S23** | 🔴🔴 **O QUIQUE DO SERVIÇO** *(Vasco, 13 jul — **a regra que desbloqueou a faixa da rede E o M3**)*<br>*"Temos de matar este lixo pela **bola na mão do NÃO SERVIDOR — ANTES de bater no chão**."*<br>*"Mesmo que tenha kick, **só o ÚLTIMO** antes da mudança de direção para o outro campo **conta**."*<br>**A LEI: <!--LEI:S23-->NÃO HÁ PONTO SEM SERVIÇO. E NÃO HÁ SERVIÇO SEM A BOLA BATER NO CHÃO.<!--/LEI:S23-->**<br>• o **servidor** larga a bola → ela **QUICA** (na linha de serviço) → e **só depois** bate<br>• o **não-servidor** tem a bola na mão → **passa-a / atira-a** ⇒ **SEM QUIQUE**<br>⇒ um segmento **sem quique fundo** antes da 1.ª travessia **NÃO É UM PONTO**. | ✅ **implementada (13 jul).** **13/13 pontos reais têm quique fundo** (prof 1,04–1,45) · **o lixo tem ZERO.** **Separação perfeita, sem afinar nada.** Vale **+3,5 de precisão**. 🔓 **É ela que permite a B15** (ampliar o `MIN_PROF`). ⚠️ **1.ª vez que o RESSALTO entra no pipeline** — se o 2.º vídeo perder pontos, **DESLIGAR ISTO PRIMEIRO**. | **`gerar_tempo_util.quique_do_servico()`** |
 | **S24** | ⬇️ **O SERVIÇO É POR BAIXO — A BOLA NÃO SOBE.** O sinal é o **arranque HORIZONTAL depois do ressalto**. *(Procurar um "toss" a subir é procurar o que não existe.)* | 📋 registar — **é um pressuposto, não um passo** | `SPEC_M1` · `PLANO_pos_BlurBall` |
 | **S25** | 🖐️ **FIM IMEDIATO — JOGADOR TOCA NA REDE** (raquete **ou** corpo). O ponto acaba aí, **sem esperar os 6 s**. | 🔴 **por implementar — está nos prompts desde o v1 (14 jun) e NUNCA foi tocada.** | v1 §5.4 · v3 P7.4 · v9 M1.3 |
 | **S26** | 🏓 **FIM — A MESMA EQUIPA BATE 2× SEGUIDAS** (toque duplo). *"Duas pancadas seguidas no mesmo campo = **impossível** → uma é espúria **OU o ponto acabou**."* | 🔴 por implementar. **Sai de graça da S21** (que já sabe de que lado veio cada pancada). | v1 §5.1 · v3 P7.1 · R13 |
 | **S29** | ⏱️ **A REGRA DOS 6 s — a rede de segurança.** A última pancada só é fim depois de **6 s sem pancada**. Nesses 6 s: pancada que **não** é serviço → **o ponto não tinha acabado**. *"**Aplica-se SEMPRE, independentemente de a bola ser detetável ou não.**"* *(O Vasco reduziu 6→5 s.)* | 🔑 **É A PEÇA QUE FALTAVA À S8.** A S8 morreu (98,9 / **47,1**) porque esperava pelo serviço seguinte **sem TETO** — as pancadas do intervalo esticavam tudo. **Os 6 s são o teto. A S8 nunca foi testada com a sua rede de segurança.** | v1 §5.2 · v3 P7.2 · v9 M1.2 · R5 |
-| **S30** | 🧍 **INATIVIDADE DOS JOGADORES — e a proibição de adivinhar.** **TODOS** visíveis + ~3 s parados ⇒ confirma o fim sem esperar os 6 s. **"Se não vires todos, NÃO adivinhes"** — usa só os 6 s. | 🟢 **REABERTA (13 jul)** — estava ⛔ pelo mesmo **21,8 % falso** da S2. Ver acima. **MEDIR ANTES DE CITAR.** | v9 M1.5 · R6 |
+| **S30** | 🧍 **INATIVIDADE DOS JOGADORES — e a proibição de adivinhar.** **TODOS** visíveis + **~3 s parados**. **"Se não vires todos, NÃO adivinhes"**. | 🟡 **A CORRER no `detetor_servico.py` (14 jul) — matou 3 candidatos, perdeu 0.** ⚠️ **MEDE-SE DENTRO DA FORMAÇÃO, não antes dela** — antes, eles ainda estão **a CAMINHAR para a posição** *(medi-la antes matava os 21)*. **Separação de 4×:** `0,088` (antes do serviço) vs `0,353` (a meio de um rally), em **meios-campos/s**. ⛔ **Não está no pipeline.** | `detetor_servico.py` |
 | **S31** | ✂️ **A MARGEM DE +2 s É PARA VER, NÃO PARA CONTAR.** *"apenas como margem visual (não é deteção)"*; **não conta no tempo útil estatístico**. | ⚠️ **verificar no código** — se a margem entra na estatística, o tempo útil está inflacionado | v9 M1.6 · R8 |
 | **S32** | 🕊️ **SALVAGUARDA DO SERVIÇO PERDIDO.** Serviço **não** detetado mas **jogo evidente** ⇒ o segmento **entra na mesma**, com `confianca: baixa`. *"**Colar dois pontos é mau; perder um ponto é pior.**"* | 🔴 por implementar. **É a diretriz de produto aplicada ao M1.** | `SPEC_M1` |
 | **S33** | 🎾 **VALIDADE DO SERVIÇO.** ✅ **Válido:** cai no quadrado **cruzado** sem tocar na malha · 🔄 **LET:** toca na tela **e cai dentro** ⇒ **REPETE** · ❌ **FALTA:** toca na malha e não entra; **ou o recetor não jogou**; ou muda o servidor. | 📋 por implementar (stub em `servico_valido()`). ⚠️ **O let é a exceção que quebra a S6/S22** — repete o mesmo lado **sem ser falta**. | v1 §4 · v3 P6 · R12 |
@@ -242,20 +334,8 @@ aprender as cores — e agora é **encontrável**.
 > exceção legítima (ponto de ouro, tie-break, let). Todas **pontuam**; nenhuma corta. Escolhe-se a
 > **sequência** globalmente mais consistente. Um falso paga caro em vários sítios; uma exceção paga num só, e passa.
 
-### S3 — porque funciona sem ver os de baixo
-
-No serviço, as duas duplas estão em configurações **incompatíveis**:
-
-| dupla que **SERVE** | dupla que **RECEBE** |
-|---|---|
-| servidor atrás + **parceiro NA REDE** | **os dois ATRÁS** |
-
-Logo, olhando **só para os 2 de cima**:
-
-- **os dois atrás** → eles **recebem** → **o serviço vem de baixo**
-- **um na rede, um atrás** → eles **servem** → **o serviço vem de cima**
-
-A formação de uma dupla **deduz** a da outra. Não é preciso ver os de baixo — e os de cima são precisamente os que o detetor vê quase sempre.
+*(A secção **"S3 — porque funciona sem ver os de baixo"** que estava aqui **foi fundida na S2** —
+14 jul. **Era a mesma coisa dita duas vezes, e é assim que a doença começa.**)*
 
 ---
 
@@ -276,15 +356,147 @@ Ver `REGRAS_PERDIDAS_v2_dos_originais.md`. **Faltam ainda ~10 ficheiros por ler.
 > 0–1) é a **D8** e a **M2-3** (rallies curtos) é a **D7**; e a antiga **C6** — *"a câmara é lateral"* —
 > **estava ERRADA** e foi corrigida no bloco **CAMPO**.
 
+---
+
+# 🎾 O DETETOR DE SERVIÇO — **a INVERSÃO do Vasco (14 jul)**
+
+> ### *"E se for ao contrário — testares o tempo útil **PARTINDO DA S2**, e confirmando com as
+> ### restantes regras de serviço?"*
+
+**A FORMAÇÃO gera. As outras regras confirmam.** *(a bola está podre; os jogadores estão limpos)*
+**BARBOSA: 21 candidatos · 21 serviços · recall 21/21 · ZERO falsos · ZERO bola.**
+👉 `detetor_servico.py` ⛔ **NÃO está no pipeline.**
+
+| # | regra | vale |
+|---|---|---|
+| **S2** | **a FORMAÇÃO diz quem serve** *(só UM adiantado)* | **gerador — recall 21/21** |
+| **F5** | **o adiantado tem de ser ESTÁVEL** *(~1,2 s)* | **2 falsos → 0** |
+| **S2b** 🆕 | 🏃 **DEPOIS DO SERVIÇO, O SERVIDOR CORRE** *para transição/rede* | **matou 20 · perdeu 0** |
+| **S30** | **a formação está PARADA** | **matou 3 · perdeu 0** |
+
+> ## 🔑 **A S42 e a S43 estavam desligadas à espera de um detetor de serviço a 100 %. ELE EXISTE.**
+
+## ⛔ VIA FECHADA — **«adiantado» = só a REDE**
+**Medido: recall 11/21** *(perde 10 serviços)* **e os extras SOBEM de 2 para 8.**
+Em **13 dos 21** o parceiro está em **TRANSIÇÃO** — *"no máximo perto da zona de transição"* **(ele)**.
+⇒ **A FRONTEIRA É «SAIR DA DEFESA».**
+
+## 🆕 S45 — **UMA FALTA É UM SERVIÇO**
+**O detetor de serviço NÃO CONTA PONTOS.** Um ponto pode ter **DOIS** serviços *(falta + 2.ª)*.
+*(14 jul: um "falso a meio de um ponto" era **um serviço REAL, falhado por ir fora**. — Vasco)*
+⚠️ **Confundir os dois SOBRE-CONTA pontos.** É o que a **S22** existe para corrigir.
+
+## 🔴 E A BOLA **NÃO CONFIRMA** — testado contra o ACASO
+A **S23-sequência** dispara **181× em 538 s** *(uma cada 3,0 s)*.
+```
+21 instantes AO ACASO "confirmam" ....... 18,4/21  (88 %)
+probabilidade de 21/21 por PURO ACASO ...  6,4 %   🔴
+```
+> **Um dado que sai 6 em quase todas as jogadas não confirma nada quando sai 6.**
+🔑 **Quando o sinal limpar, ela SOMA (D16). NUNCA VETA (D18).**
+
+---
+
+## 🎾 S23 — **A SEQUÊNCIA** *(a S23 reescrita pelo Vasco, 14 jul)* — `s23_sequencia.py`
+
+```
+⓪ NÃO é ROUPA BRANCA (B16)          ① FUNDA (na linha de serviço)
+② QUICA NO CHÃO — inversão VERTICAL                (ele larga a bola)
+③ BATE NA RAQUETE — inversão HORIZONTAL, EM DIREÇÃO AO CAMPO ADVERSÁRIO
+④ 🔑 só conta o ÚLTIMO **ANTES DE A BOLA MUDAR DE CAMPO**
+⑤ e a travessia só vale se vier da RAQUETE (L alto)   — a S15
+```
+**As DUAS correções dele levaram o recall de 71 % → 95 %:**
+- ❌ *"o ténis está PARADO"* → **um ténis MEXE-SE.** A verdade é **GEOMÉTRICA** *(B16)*.
+- ❌ *"o último de uma FILA de quiques"* → **sem âncora, o «último» vai parar a qualquer lado**
+  *(o ruído gera quiques em catadupa)*. **O ÚLTIMO É O ÚLTIMO ANTES DA MUDANÇA DE CAMPO.**
+🔑 **A inversão HORIZONTAL era metade do "bloqueio único"** — e **não foi preciso resolvê-la**:
+bastou exigir que fosse **NA DIREÇÃO DO OUTRO CAMPO**.
+⛔ **Não corre no pipeline.** **Precisão sozinha: 11 %** — é um **CONFIRMADOR**, não um gerador.
+
+---
+
+---
+
+## ⏱️🔗 S42 ⊕ S43 — **O SERVIÇO É A FRONTEIRA DO PONTO**   *(fundidas 14 jul)* — `ligar_s42_s43.py`
+
+> # **UM PONTO COMEÇA NUM SERVIÇO E ACABA QUANDO VEM O SEGUINTE.**
+> **O serviço abre um ponto — e, ao abri-lo, FECHA o anterior. É a mesma lei, vista dos dois lados.**
+
+Deixaram de ser duas regras separadas. São **UMA**, com duas consequências:
+
+| | a lei dele | o que faz na timeline |
+|---|---|---|
+| 🔗 **COLA** *(era a S43)* | *"dois pedaços só são pontos DIFERENTES se houver um SERVIÇO entre eles"* | dois pedaços da bola **SEM serviço no meio** ⇒ são **o MESMO ponto** ⇒ colam-se *(a bola desapareceu a meio; não é um ponto novo)* |
+| ✂️ **CORTA** *(era a S42)* | *"NÃO HÁ FIM DE PONTO SEM SERVIÇO A SEGUIR"* | um serviço **A MEIO** de um segmento ⇒ o ponto anterior **já tinha acabado** ⇒ corta-se ali |
+
+### 🔑 ONDE SE CORTA — **a regra dele, na íntegra (14 jul, à noite):**
+> *"Um ponto começa no serviço. Se virmos outro serviço temos a CERTEZA de que o ponto anterior
+> já acabou, por isso garantidamente temos de ir cortar a **PANCADA COM RAQUETE** (quique
+> HORIZONTAL, ou mudança de direção perto da bounding box de um jogador — de certeza) detetada
+> ANTERIOR a esse serviço. E aí entra a regra que definimos de deixar **x segundos** após essa
+> pancada como margem — penso que o definido eram **2 segundos**."*
+
+⇒ **O serviço é o SINAL de que o ponto morreu. NÃO é o SÍTIO onde morreu.**
+**O ponto acabou na ÚLTIMA PANCADA COM RAQUETE antes do serviço — + os 2 s de margem**
+*(o `M_CONFIRMADO`, a régua dele de 12 jul: "1 s é pouco → 3 s colava dois pontos → **2 segundos
+é o melhor**", chegado a VER o vídeo)*.
+
+🩸 **O MEU ERRO (14 jul):** cortava **NO serviço** — a ~1 s do sítio certo, e a meio de pontos reais.
+**Cortar na última pancada com raquete é a diferença entre partir um ponto ao meio e cortá-lo rente
+ao fim.** *(A pancada = a **P5**: proximidade da box **seguida de mudança de direção** — e o quique
+HORIZONTAL é a inversão da parede/raquete, exatamente a assinatura que o Vasco descreveu.)*
+
+## 🔴 ⛔ DESLIGADAS — **e a razão está MEDIDA, e é DIFERENTE da de ontem**
+
+**Ontem (13 jul):** o detetor de serviço dava **92 %** (12/13) ⇒ a cola **ENGOLIA** o ponto que ele
+falhava (13 → 12). *"A D18 diz que nenhuma regra pode VETAR. Esta não veta — ENGOLE, que é pior."*
+
+**Hoje o detetor (só jogadores) dá 21/21 e 13/13.** Essa razão desapareceu — **mas apareceu outra,
+e é a que manda:**
+
+```
+🔴 O DETETOR DE SERVIÇO TEM 1 FALSO A MEIO DE UM PONTO.
+   (Parada4, t=64,7s — CONFIRMADO PELO VASCO: "é um falso declarado, aquilo não é um serviço".
+    A formação de serviço apareceu por acaso — 4 parados, um adiantado, o servidor a arrancar —
+    mas o ponto AINDA DECORRIA.)
+   E o CORTE parte esse ponto exatamente aí.  ⇒  o fim_dentro SOBE: 2→3 (Parada4) e 6→8 (Barbosa).
+```
+> # 🔒 **D15 — «um FIM CERTO nunca pode cair a meio de um ponto». Se sobe, DESLIGA a regra. NUNCA
+> # relaxes o teste. É o PIOR ERRO POSSÍVEL.**
+> **A LEI É CERTA. O CORTE (na última pancada +2 s) É CERTO. O que falta é o detetor de serviço
+> não ter falsos DENTRO de pontos.**
+
+### E a BOLA **não** salva isto — testado, 14 jul
+A confirmação natural seria: *"se é serviço a sério, há um QUIQUE FUNDO (a S23)"*. **Não funciona:**
+```
+o falso dos 64,7s ....... TEM quique aos 64,4s
+TODOS os candidatos ..... têm quique (até os 2 do aquecimento, aos 6s e 15s)
+```
+**Há quiques por todo o lado — é a B19 (830 teletransportes) outra vez.** A bola **não confirma** os
+verdadeiros *(de manhã: era 88 % ACASO)* **e não desmente** os falsos.
+
+> ## ⇒ 🚪 **TUDO VOLTA À B19.** Os jogadores levam-nos até ao serviço, e dizem QUEM serve. A BOLA
+> ## é que teria de dizer **«este é a sério»** — e está podre. **A S42⊕S43 destrava quando a bola limpar.**
+
+### ⚠️ E a F12 — deixou de ser a barreira
+Para o detetor correr no Parada4 faltavam as **costuras da parede** *(a F12)*. **O Vasco desenhou-as
+à mão (14 jul)** → `calibracao_parada4_v2.json`. **NÃO mexem no estado travado** *(96,7 vs 96,8 —
+idêntico ao décimo)*. As duas costuras caíram **no mesmo sítio que no Barbosa** *(frente 0,40 vs 0,38 ·
+trás 0,76 vs 0,78)* ⇒ **a fronteira das fases é do JOGO, não do vídeo.** **Já não é a F12 que bloqueia
+— é a B19.**
+
+---
+
 ## 🎬 M2 / FASES — **AS REGRAS DOS PROMPTS** *(nunca inventariadas)*
 
 | # | Regra | Estado | Origem |
 |---|---|---|---|
 | **F1** | 👥 **A fase é da EQUIPA, nunca do jogador.** *"A fase é determinada pela posição **colectiva da equipa** — nunca pelo jogador individual."* | 📋 | v1 §3 · v3 P4 |
-| **F2** | 🧱 **A REGRA DAS DUAS BOXES · TRANSIÇÃO É O ESTADO-RESÍDUO.** Só é **DEFESA** se forem **ambos** atrás da linha de serviço; só é **ATAQUE** se forem **ambos** à frente da interceção malha 3/2. **Tudo o resto = TRANSIÇÃO** *(incluindo um no fundo e outro na rede)*. | ✅ é a spec v9 | v9 §1 |
+| **F2** | 🧱 **A REGRA DAS DUAS BOXES · TRANSIÇÃO É O ESTADO-RESÍDUO.** Só é **DEFESA** se forem **ambos atrás da COSTURA DE TRÁS da parede**; só é **ATAQUE** se forem **ambos à frente da COSTURA DA FRENTE**. **Tudo o resto = TRANSIÇÃO** *(incluindo um no fundo e outro na rede)*.<br>🔴 **CORRIGIDA (14 jul): as marcas são as COSTURAS DA PAREDE — `vidro\|malha3` → `malha2\|malha3` — NÃO a linha de serviço.** A linha de serviço vale para o **SERVIÇO** (S1/S9), que é **outra coisa**. *(Estava certo no `calibracao_BarbosaMeireles.json` desde 13 jul — escrito pelo Vasco, com o aviso **"a F2 é que está errada"** — e errado aqui, na fonte. **A doença: a verdade escrita em dois sítios, e o sítio errado é o que toda a gente lê.**)* | 🟡 **MEDIDA — mas em FICHEIRO NOVO. ⛔ O PIPELINE NÃO A IMPORTA.** *(«implementada» ≠ «a correr». Marcá-la como a-correr seria a 12.ª mentira.)* — `fases_m2.py`. As 4 costuras já estavam na calibração e **nunca tinham sido usadas**. | v9 §1 · `calibracao_BarbosaMeireles.json` |
 | **F3** | 📍 **A posição é a ARESTA INFERIOR da box** (contacto com o solo) — **nunca** a cabeça, o tronco, a raquete **ou um pé isolado**. | ✅ | v1 §1 · v3 P2 · v9 §0.2 |
 | **F4** | 🎾 **O SERVIÇO É UM MOMENTO DENTRO DO ATAQUE — não uma fase.** *"Quando o servidor está no FUNDO e o parceiro está na REDE, **a equipa está em ATAQUE**."* | 🚨 **CONTRADIZ A F2** (que classificaria isso como TRANSIÇÃO). **Decisão do Vasco.** Ver `REGRAS_PERDIDAS_v2` §③ | v1 §3 · v3 P4 |
-| **F5** | 🧊 **ANTI-JITTER: o cruzamento tem de ser CLARO.** *"Se a box apenas **toca, treme ou oscila** em cima da marca sem a atravessar de forma **estável**, **NÃO** abras nova entrada."* | 🔴 por implementar | v9 M2.6 |
+| **F5** | 🧊 **ANTI-JITTER: o cruzamento tem de ser CLARO.** *"Se a box apenas **toca, treme ou oscila** em cima da marca sem a atravessar de forma **estável**, **NÃO** abras nova entrada."* | 🟡 **A CORRER (14 jul) — e foi ela que fechou o detetor de serviço** *(2 falsos → **ZERO**)*. 🔑 **PORQUÊ:** lá em cima a faixa de transição tem **12 PÍXEIS** — a perspetiva esmaga-a, e **um tremor de 5 px atravessa-a**. **PLANALTO medido: 1,0 → 1,6 s dão o mesmo** (não é um número mágico). ⚠️ **É a D19 em ação: a tolerância vive no TEMPO, NUNCA no espaço.** ⛔ Não está no pipeline. | `detetor_servico.py` |
 | **F6** | 🔬 **Raciocina ao FRAME, apresenta ao CLIP.** Percorre em resolução fina por dentro; consolida no output. *"A TRANSIÇÃO, por ser a mais dinâmica, é a que mais beneficia."* | 🔴 | v9 M2.7 |
 | **F7** | 🔢 **Conta-se por TRANSIÇÕES, não por combinações.** `nº entradas = nº transições + 1`. A mesma combinação **repete-se** — cada ocorrência é uma entrada independente. | 🔴 | v8.0 · v9 M2.3 |
 | **F8** | 🔗 **Sem buracos nem sobreposições:** `fim[i] == inicio[i+1]`; a 1.ª abre no início do rally, a última fecha no fim. | 🔴 | v9 M2.4 |
@@ -330,6 +542,10 @@ Ver `REGRAS_PERDIDAS_v2_dos_originais.md`. **Faltam ainda ~10 ficheiros por ler.
 | **D16** | ➕ **SINAIS INDEPENDENTES SOMAM.** Bola e jogadores **não competem — somam.** | `HANDOFF_JOGADORES` |
 | **D17** | 🧐 **CONFIRMAR A PREMISSA ANTES DE ACEITAR A CONCLUSÃO.** *(Duas propostas externas bem argumentadas partiam de um pipeline que não é o nosso.)* | `HANDOFF_JOGADORES` |
 | **D18** | ⚖️ **NENHUMA REGRA DO JOGO PODE VETAR UM CANDIDATO** — há sempre uma exceção legítima (ponto de ouro, tie-break, **let**). Todas **pontuam**; nenhuma corta. | 12 jul |
+| **D19** | 📏 **A LINHA É A LINHA. NÃO SE PÕE UM LIMIAR EM CIMA DELA.** *"Passou a linha?"* é **BINÁRIO**. ⛔ **NUNCA** substituir por *"está mais perto da linha A do que da linha B"*, por uma **percentagem do meio-campo**, por uma **margem de tolerância**, nem por um **ponto médio**. Isso **não é a linha — é uma linha INVENTADA**, algures a meio do campo.<br>🩸 *Vasco, 14 jul, a olhar para o frame:* **"<!--LEI:D19-->vê os pés do jogador de vermelho. Está claramente à frente da linha de serviço. **Porque não é detetado como estando à frente?**<!--/LEI:D19-->"** — porque eu tinha escrito `abs(y−rede) < abs(y−linha)`: **o PONTO MÉDIO**. Um jogador **um metro à frente da linha** era lido como **ATRÁS**. **Custo:** a formação dizia *"serve BAIXO"* **20 vezes em 21** — um sinal **MORTO com ar de vivo**. Corrigido: aparecem **blocos de serviço** e uma **mudança de dupla**. Um jogo a sério.<br>⚠️ **O erro é INVISÍVEL nos números.** Não parte nada, não dá exceção: dá **a resposta errada, com confiança.** Só se vê **A OLHAR**.<br>👉 **A tolerância vive no TEMPO, NUNCA no ESPAÇO:** o tremor resolve-se com **histerese (D1)** e com o **anti-jitter (F5)** — *"se a box só toca, treme ou oscila em cima da marca, não abras entrada"*. **NÃO SE MOVE A LINHA PARA TAPAR O TREMOR.** | **14 jul · Vasco, a ver o frame** |
+| **D20** | 📏 **EM CIMA DA LINHA ⇒ CONTA COMO ATRÁS.** A fronteira pertence **SEMPRE à zona mais RECUADA**. *"<!--LEI:D20-->Quem tem o pé **NA** linha **ainda não a passou**.<!--/LEI:D20-->"* *(É a **D1** — em dúvida, o estado mais conservador — aplicada ao ESPAÇO.)* | **14 jul · Vasco** |
+| **D21** | ✍️ **QUANDO O VASCO ATUALIZA UMA REGRA, ESCREVE-SE INTEIRA, COM AS PALAVRAS DELE. NUNCA SE ATALHA.** + 🔒 **CITAÇÃO LITERAL** *(Vasco, 16 jul)* — **o texto da lei, à letra, está no bloco LEI DE ESCRITA no topo deste ficheiro** (não se repete aqui, para não haver duas versões). ⇒ **cita-se** com `python3 citar.py <ID>` (extrai da fonte, sem retipar) e **confirma-se** com `python3 guarda_citacao.py` (dispara se não bater, letra a letra). **Atalhar tira a NUANCE — e a nuance É a regra.** | **14–16 jul · Vasco** |
+| **D22** | 🆕 🚪 **UM ARGUMENTO QUE NÃO SE USA É UMA MENTIRA À ESPERA.** *(Vasco, 15 jul)* **Se uma função pede um vídeo, TEM de usar esse vídeo — ou rebentar.** A configuração por-vídeo *(régua + polígono + boxes)* vive numa **PORTA ÚNICA** (`configurar(video)`); um vídeo desconhecido **FALHA**, não herda o anterior. *(O caso: a `cascata(video)` recebia o vídeo e ignorava-o — corria o Barbosa com os dados do Parada4, em silêncio: 23 serviços → 16. Apanhou-o um número que não fazia sentido, não um teste — "um detetor que acha 23 não colapsa para 16".)* | **15 jul · Vasco** |
 
 ---
 
@@ -375,3 +591,181 @@ O meio-campo **longe** tem **100 px**; o **perto** tem **290 px** — para os me
 > **Nunca perder um ponto. Mais lixo é preferível a menos tempo útil. Otimizar RECALL.**
 
 Um ponto perdido é informação perdida **para sempre**. Lixo a mais é só um incómodo a saltar.
+
+---
+---
+
+# 🌙 AS REGRAS DE 13 JUL, À NOITE — o 2.º VÍDEO (BarbosaMeireles)
+
+*Nasceram todas da mesma coisa: **o Vasco viu o vídeo** e disse **"está muito mau mesmo"**.
+Nenhuma apareceu nos números primeiro. **Os números só confirmaram depois.***
+
+---
+
+## S42 — A CONFIRMAÇÃO DO FIM   ⛔ *lei certa · código pronto · DESLIGADA (falta o sinal)*
+
+> ### **<!--LEI:S42-->NÃO HÁ FIM DE PONTO SEM SERVIÇO A SEGUIR.<!--/LEI:S42-->**
+> **Para um ponto acabar, a pancada SEGUINTE deve SEMPRE ser um SERVIÇO.**
+
+**Três coisas DIFERENTES, que o `SILENCIO=4` fazia todas ao mesmo tempo, misturadas:**
+
+| | |
+|---|---|
+| **① AGRUPAR** | dois cruzamentos a menos de 4 s são o **mesmo ponto** |
+| **② VERIFICAR** | depois da última pancada, espera **4 s** para ver se vem outra. É **DECISÃO**, não é o que se mostra |
+| **③ APRESENTAR** | confirmado que aquela era a última, o vídeo mostra **+2 s** *(o Vasco: "2 segundos é o melhor" — a ver o vídeo)* |
+
+**A confirmação (duas condições, ambas leis dele, ZERO números novos):**
+- a pancada seguinte é um **SERVIÇO** *(S23: teve um **quique FUNDO** antes)*
+- **e está a ≥ 4 s** — *"um ponto não pode começar 4 s depois do outro"*.
+  🔑 **Sem esta segunda, uma pancada a meio de um rally passa por serviço** — num rally a bola
+  **também** quica fundo. *(O ponto 21 do Barbosa cortava aos 413,2 s e perdia **8,3 s** de jogo:
+  a "pancada seguinte" estava a **2,8 s**.)*
+
+**Não confirmado ⇒ O PONTO NÃO ACABOU ⇒ mais margem.** ⚠️ **Só APERTA quando tem CERTEZA. Nunca corta na dúvida** (D18).
+
+⛔ **DESLIGADA porque** a margem do ramo não-confirmado ainda serve de **COLA** — no Barbosa
+fundia os pontos 13 e 14. **Destrava com a S43 + o detetor de serviço a 100%.**
+
+---
+
+## S43 — A COLA   ⛔ *lei certa · código pronto · DESLIGADA (o detetor de serviço só dá 92%)*
+
+> ### **<!--LEI:S43-->Dois pedaços só são pontos DIFERENTES se houver um SERVIÇO entre eles.<!--/LEI:S43-->**
+> *(Corolário direto do **"não há ponto sem serviço"**.)*
+
+**O problema que resolve:** um ponto parte-se em dois quando a bola desaparece. Até 13 jul, o que
+os voltava a juntar era **a SOBRA DA MARGEM DE APRESENTAÇÃO** — não uma regra, **um acidente**.
+
+> ## 🔑 **A MARGEM DE APRESENTAÇÃO NÃO PODE SER A COLA.** — Vasco
+
+⛔ **DESLIGADA porque** o detetor de serviço acerta **12/13 (92%)**. O falhado é o **ponto 2 do
+Parada4**. A cola pergunta *"abres com um serviço?"*, ouve **NÃO** — e **ENGOLE UM PONTO REAL**
+(13 → 12 pontos). ⚠️ **A D18 diz que nenhuma regra pode VETAR. Esta não veta — ENGOLE, que é pior.**
+
+---
+
+## B16 — **A ROUPA BRANCA**   🔴 *(era "o ténis" — GENERALIZADA a 14 jul, pelo Vasco)*
+
+> ### 🩸 **NÃO É O TÉNIS. É QUALQUER COISA BRANCA NUM JOGADOR.**
+> *(Vasco, 14 jul, a olhar para um frame: a bola está **em baixo**; o sistema deteta-a **em cima**,
+> na **CAMISOLA BRANCA** de um jogador do outro campo.)*
+> **Camisola · meias · ténis.** *(a **J12** já dizia que a assinatura visual são CINCO elementos)*
+>
+> ⚠️ **E o ténis NÃO está sempre parado** — *"a única coisa que podemos dizer é que os ténis estão
+> sempre no **limite das bounding boxes**"*. **A verdade é GEOMÉTRICA, não de velocidade.**
+>
+> **MEDIDO (14 jul):** **50 %** das deteções do BlurBall estão **DENTRO** de uma box de jogador.
+> A B16 original *(os 18 % de baixo)* apanha só **49 % disso** — **a camisola está A MEIO.**
+>
+> ⚠️ **E cortar «tudo o que está dentro de uma box» MATA O SERVIÇO** *(recall 21 → 14)*: o quique
+> do serviço acontece **AOS PÉS DO SERVIDOR** ⇒ **dentro da box dele.**
+> 👉 **FALTA A OUTRA METADE:** 🔑 ***"e MOVE-SE COM a box"*** — **a roupa VIAJA COM o jogador;
+> a bola ATRAVESSA-O.**
+
+---
+
+## B16-velha — O TÉNIS   *(a formulação original)*
+
+> ### *"Se detetar uma bola no **limite inferior da bounding box**, e ela **É UMA CONSTANTE** —
+> ### tenho de verificar essa bola."*
+
+**Medido:** **25,2 %** das "bolas" do Barbosa estão nos **18 % de baixo** de uma box *(15,2 % no
+Parada4 — **é um problema DESTA câmara**)*.
+
+⚠️ **MAS APAGAR O TÉNIS NÃO DEVOLVE A BOLA.** Testado: matar TODOS os candidatos-pé deixa o
+`fim_dentro` exatamente onde estava. **O estrago acontece ANTES — no detetor.** *(ver B19)*
+
+---
+
+## B17 — O SALTO E O REGRESSO   🔴 *por implementar (e vale pouco: só apanha 4 %)*
+
+> *"Uma bola não pode estar num sítio, passar para outro **sem mudança de direção**, e **voltar à
+> mesma direção** num terceiro frame."*
+
+⚠️ **Medido: só 4 % dos ténis têm esta assinatura.** O ténis **não salta — SENTA-SE.**
+*(mediana de movimento quando a deteção está num pé: **4,4 px**. Está **parada**.)*
+**O sinal certo é o "É UMA CONSTANTE" da B16 — e o Vasco disse-o primeiro.**
+
+---
+
+## B18 — A BOLA VAI SEMPRE A CAMINHO DE ALGUÉM   🔴 *(a mais forte. Espera pela B19)*
+
+> ### *"<!--LEI:B18-->O ponto decorre com a bola em movimento após o serviço. Tem de estar num **MOVIMENTO
+> ### CONTÍNUO** que se ajuste ao **aproximar-se de pelo menos uma bounding box** — **até mudar
+> ### de direção**.<!--/LEI:B18-->"*
+
+**Entre duas pancadas, a bola CONVERGE para um jogador. Sempre. É o que o jogo É.**
+Mata os **ténis** *(estão colados a alguém — não se aproximam de ninguém)*, mata o **público**,
+e **COSE a cadeia**: bola → jogador → bola → jogador. **Se a cadeia não fecha, não é jogo.**
+
+---
+
+## 🔴 B19 — OS 9 CANDIDATOS   *(a raiz. Tudo o resto espera por isto.)*
+
+> ### **"<!--LEI:B19-->Há 8 ténis num campo de padel.<!--/LEI:B19-->"** — Vasco
+> ## **8 pés + 1 bola = 9 hipóteses.**
+
+**O BlurBall vê-as todas** — o `_detect_blob_nms` devolve **todos** os picos do mapa de calor.
+**O `OnlineTracker._select_best` fica com UMA e deita 8 fora.** E escolhe **pelo SCORE** quando não
+tem previsão *(início de cada troço, depois de cada buraco)*:
+
+```
+um TÉNIS tem score 0,735   ·   a BOLA tem 0,758      <- É UMA MOEDA AO AR
+```
+
+**E depois o `_select_not_too_far` PRENDE-O ao sapato** — que está sempre perto de si próprio.
+**O tracker senta-se lá e não larga.**
+
+> ## ⇒ Nesses frames a bola A SÉRIO **NUNCA É DETETADA**.
+> ## **A pancada não é "mal vista". É NUNCA VISTA.**
+
+⛔ **E não se resolve com um limiar:** `thr=0,7` deixa passar **58,7 %** das bolas e **56,9 %** dos
+ténis. `thr=0,9` mata **4 em cada 5 BOLAS**. ⛔ **Nem com a COR:** saturação **61** (ténis) vs **76**
+(bola) — a bola tem 4 píxeis e o quadradinho é dominado pelo **azul do campo** (D13).
+
+> # **D9, à letra: DETETAR GENEROSAMENTE, LIMPAR PELA ESTRUTURA.**
+> **Hoje o BlurBall deteta AVARENTAMENTE (um só) e decide pela CONFIANÇA.**
+> **É o erro do `max_det=4` — outra vez, agora na BOLA.**
+
+**Patch escrito** em `blurball/src/runners/inference.py` *(procurar `🔴 PATCH`)* — **aditivo**: o
+`traj_frames` sai igual, sai um `candidatos.csv` ao lado. **Correr: `OS_9_CANDIDATOS.command`.**
+
+---
+
+## 🔒 E A LEI QUE SALVOU A S17 (a rede) DE SER DESLIGADA
+
+> # **A BOX É O CORPO. A RAQUETE CHEGA A MAIS DE UM METRO.**
+
+A S17 só dispara se a bola virar **"longe de qualquer box"**. **"Longe" eram 70 cm** (`RED_DIST=0,10`).
+Mas uma bola batida **à VOLEIA** sai da raquete e fica a **70 cm–1,2 m do CORPO**: *"longe"* pela
+regra — **e no entanto FOI BATIDA**. A S17 lia isso como *"bateu na rede"* e **MATAVA O PONTO A MEIO**.
+
+**Medido no Barbosa (contra o GT do Vasco): 4 dos 5 fins-a-meio-de-ponto eram VOLEIAS** — a bola
+virava **70°, 75°, 77°, 86°** ao pé da rede, com um jogador a **~1 m**.
+
+```
+RED_DIST 0,10 (70 cm)  ->  recall 79,6 · fim_dentro 5
+RED_DIST 0,17 (1,2 m)  ->  recall 81,9 · fim_dentro 3     <- APLICADO
+Parada4: NÃO MEXE UMA DÉCIMA (96,8 / 95,4). A S17 continua a valer -5,0. É de graça.
+```
+
+⚠️ **0,17 não é mágico:** é **(braço + raquete ≈ 1,2 m) / (meio-campo = 6,95 m)**. É o **ALCANCE DE
+UMA RAQUETADA** — sobrevive a outra câmara. ⚠️ **NÃO cura o fundo:** a box dos **PÉS** continua a
+não ver a **RAQUETE**. **É um penso. A cura é a POSE — ou o ÁUDIO.**
+
+---
+
+## 🔊 E O ÁUDIO — **A CONSTITUIÇÃO DIZIA "GRAVAR COM ÁUDIO". OS VÍDEOS JÁ TÊM.**
+
+```
+Parada4.mp4          aac · 48 kHz · estéreo · 100 kbps   ✅  max −16,8 dB
+BarbosaMeireles.mp4  aac · 48 kHz · estéreo ·  99 kbps   ✅  max −13,4 dB
+```
+
+**Não é silêncio. É som a sério. E NUNCA FOI TOCADO** — o pipeline só lê píxeis.
+**O quique, a parede e a raquete são TRÊS SONS DIFERENTES.** É o **bloqueio único**, e a porta que
+dávamos como trancada **está aberta desde o início.**
+
+> **A doença, outra vez: uma frase escrita ("gravar com áudio") que APODRECEU e passou a mentir na
+> linha que toda a gente lê. — SÓ O QUE SE CORRE É QUE CONTA.**

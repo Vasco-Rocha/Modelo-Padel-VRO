@@ -45,7 +45,8 @@ TRAVADO = {
     "servicos":  (13,   0),      # 13/13. NUNCA menos.
     "n_pontos":  (13,   1),      # reais: 13
     "pancadas":  (133,  5),      # a 0.7 eram 57. O 0.4 foi buscá-las. (-2: as fantasma, sem jogador)
-    "fim_certo": (19,   2),      # eventos rede/mão. ⚠️ 0 DENTRO de pontos reais. Ver abaixo.
+    "fim_certo": (16,   2),      # eventos rede/mão. ⚠️ 0 DENTRO de pontos reais. Ver abaixo.
+                                 # ⬇️ 19 -> 16  (RED_DIST 0,10 -> 0,17 · 13 jul · DECISÃO DO VASCO)
     "fim_dentro":(0,    0),      # 🔒 NUNCA >0. Um fim certo a meio de um ponto CORTA-O AO MEIO.
 }
 
@@ -85,6 +86,31 @@ TRAVADO = {
 
 # ---------------------------------------------------------------------------
 #  PORQUE MUDARAM OS VALORES TRAVADOS  (a ÚNICA forma legítima de lhes mexer)
+# ---------------------------------------------------------------------------
+#  13 jul 2026, à NOITE — fim_certo: 19 -> 16.   RED_DIST: 0,10 -> 0,17.
+#  DECISÃO EXPLÍCITA DO VASCO, depois do 2.º vídeo (BarbosaMeireles) ganhar ground-truth.
+#
+#  A LEI:  A BOX É O CORPO. A RAQUETE CHEGA A MAIS DE UM METRO.
+#
+#  A S17 (a rede) só dispara se a bola virar "LONGE de qualquer box". "Longe" eram 70 cm.
+#  Mas uma bola batida à VOLEIA sai da raquete e fica a 70 cm–1,2 m do CORPO: "longe" pela
+#  regra — e no entanto FOI BATIDA. A S17 lia isso como "bateu na rede" e MATAVA O PONTO A MEIO.
+#     Barbosa, contra o GT do Vasco: 4 dos 5 fins-a-meio-de-ponto eram VOLEIAS.
+#     A bola virava 70°, 75°, 77°, 86° ao pé da rede — com um jogador a ~1 m.
+#
+#  ⚠️ E EIS PORQUE ISTO É LEGÍTIMO, e não uma erosão do teste:
+#       recall     96,8 -> 96,8   (IGUAL)
+#       precisao   95,4 -> 95,4   (IGUAL)
+#       n_pontos     13 -> 13     ·  servicos 13/13  ·  fim_dentro 0 🔒
+#       ablação: a S17 continua a valer -5,0 de precisão. NÃO PERDEU VALOR.
+#     NENHUM RESULTADO MEXEU. Os 3 "fins certos" que deixaram de disparar eram REDUNDANTES —
+#     outra regra já os cobria. O `fim_certo` é um CONTADOR INTERNO, não um resultado.
+#  E o que se ganha, no vídeo NOVO: recall 79,6 -> 81,9 · fim_dentro 5 -> 3.
+#
+#  ⚠️ 0,17 NÃO É UM NÚMERO MÁGICO: é (braço + raquete ≈ 1,2 m) / (meio-campo = 6,95 m).
+#     É o ALCANCE DE UMA RAQUETADA. Sobrevive a outra câmara. NÃO CURA o fundo — a box dos
+#     PÉS continua a não ver a RAQUETE. É um penso. A cura é a POSE ou o ÁUDIO.
+#
 # ---------------------------------------------------------------------------
 #  13 jul 2026 — 93,2/89,4 (15 pontos) -> 97,0/87,2 (13 pontos).
 #  DECISÃO EXPLÍCITA DO VASCO, depois de ver o TEMPO_UTIL_v12_S12.mp4.
